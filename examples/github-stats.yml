@@ -5,9 +5,10 @@
 # The generated SVGs are pushed to the `github-stats-enhanced` branch and can be referenced
 # in your profile README as:
 #
-#   ![Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-adaptive.svg)
-#   ![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/languages-adaptive.svg)
+#   ![Stats1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats1-adaptive.svg)
+#   ![Stats2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats2-adaptive.svg)
 #   ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/contributions-adaptive.svg)
+#   ![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/languages-adaptive.svg)
 
 name: GitHub Stats
 
@@ -41,11 +42,32 @@ jobs:
         with:
           github_user_name: ${{ inputs.username || github.repository_owner }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Output directory for generated SVG files
           output_dir: dist
+
+          # Card theme: adaptive (follows system dark/light), dark, light
           theme: ${{ inputs.theme || 'adaptive' }}
-          # Optional: comma-separated languages to exclude from the languages card
+
+          # Responsive SVGs (width="100%", scales to container, preserveAspectRatio="none")
+          # Set to "false" for fixed pixel dimensions
+          responsive: "true"
+
+          # --- Card dimensions (pixels) ---
+          # Uncomment and set to override defaults
+          # stats_width: "220"
+          # stats_height: "200"
+          # contributions_width: "460"
+          # contributions_height: "180"
+          # languages_width: "500"
+
+          # Number of languages to display in the languages card (default: 8)
+          # languages_count: "8"
+
+          # Comma-separated languages to exclude from the languages card
           # exclude_languages: "HTML,CSS,SCSS"
-          # Optional: comma-separated owner/repo pairs to exclude from stats
+
+          # Comma-separated owner/repo pairs to exclude from stats
           # exclude_repos: "your-username/some-private-repo"
 
       - name: Deploy to github-stats-enhanced branch
