@@ -11,7 +11,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { fetchGitHubStats } from "../src/api/index.ts";
 import { writeStatsYaml, readStatsYaml } from "../src/data.ts";
-import { generateSvgs, generateReport, generateDemo } from "../src/generate.ts";
+import { generateSvgs, generateReport, generateDemo, filterLanguageStats, filterContributionStats } from "../src/generate.ts";
 import type { GitHubStats } from "../src/api/types.ts";
 
 // ── Load .env.local ───────────────────────────────────────────────────────────
@@ -72,7 +72,9 @@ if (fromCache) {
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 const ro = { responsive: true };
-generateSvgs(stats, outDir, "adaptive", ro, ro, ro);
-generateReport(stats, outDir);
-generateDemo(stats, outDir);
+const langFiltered    = filterLanguageStats(stats, {});
+const contribFiltered = filterContributionStats(stats, {});
+generateSvgs(langFiltered, contribFiltered, outDir, "adaptive", ro, ro, ro);
+generateReport(langFiltered, outDir);
+generateDemo(langFiltered, outDir);
 console.log(`\nDone — open output/index.html to preview`);

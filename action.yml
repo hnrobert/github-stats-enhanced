@@ -30,7 +30,11 @@ inputs:
     required: false
     default: "adaptive"
   exclude_repos:
-    description: "Comma-separated list of repos to exclude (owner/repo)"
+    description: "Comma-separated repos to exclude from language stats (owner/repo)"
+    required: false
+    default: ""
+  contrib_exclude_repos:
+    description: "Comma-separated repos to exclude from contribution stats (owner/repo)"
     required: false
     default: ""
   responsive:

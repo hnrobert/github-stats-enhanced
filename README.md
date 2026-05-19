@@ -79,7 +79,7 @@ jobs:
           # exclude_repos: "your-username/some-private-repo"
 
       - name: Deploy to github-stats-enhanced branch
-        uses: crazy-max/ghaction-github-pages@main
+        uses: crazy-max/ghaction-github-pages@v5
         with:
           target_branch: github-stats-enhanced
           build_dir: dist
