@@ -1,7 +1,7 @@
 // Serialization helpers for GitHubStats ↔ YAML
 import { dump, load } from "js-yaml";
 import { readFileSync, writeFileSync } from "node:fs";
-import type { GitHubStats } from "./github-api.ts";
+import type { GitHubStats } from "./api/types.ts";
 
 export function statsToYaml(stats: GitHubStats): string {
   return dump(stats, { lineWidth: 120, noRefs: true });

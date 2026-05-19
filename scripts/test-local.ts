@@ -10,13 +10,13 @@
 // Requires GITHUB_TOKEN in env or .env.local
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { fetchGitHubStats } from "../src/github-api.ts";
+import { fetchGitHubStats } from "../src/api/index.ts";
 import { writeStatsYaml, readStatsYaml } from "../src/data.ts";
 import { generateStatsCard1, generateStatsCard2 } from "../src/svg/stats-card.ts";
 import { generateLanguagesCard } from "../src/svg/languages-card.ts";
 import { generateContributionsCard } from "../src/svg/contributions-card.ts";
-import type { Theme } from "../src/svg/utils.ts";
-import type { GitHubStats } from "../src/github-api.ts";
+import type { Theme } from "../src/svg/theme.ts";
+import type { GitHubStats } from "../src/api/types.ts";
 
 if (existsSync(".env.local")) {
   const text = await Bun.file(".env.local").text();

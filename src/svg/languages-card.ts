@@ -1,5 +1,7 @@
-import type { GitHubStats } from "../github-api.ts";
-import { getColors, getCardStyle, svgOpen, getLangColor, escapeXml, type Theme, type CardOptions, FONT } from "./utils.ts";
+import type { GitHubStats } from "../api/types.ts";
+import { getColors, getCardStyle, type Theme } from "./theme.ts";
+import { getLangColor } from "./colors.ts";
+import { svgOpen, escapeXml, type CardOptions, FONT } from "./helpers.ts";
 
 export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);

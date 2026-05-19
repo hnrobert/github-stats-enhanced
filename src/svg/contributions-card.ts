@@ -1,5 +1,6 @@
-import type { GitHubStats } from "../github-api.ts";
-import { getColors, getCardStyle, svgOpen, formatNumber, escapeXml, type Theme, type CardOptions, FONT } from "./utils.ts";
+import type { GitHubStats } from "../api/types.ts";
+import { getColors, getCardStyle, type Theme } from "./theme.ts";
+import { svgOpen, formatNumber, escapeXml, type CardOptions, FONT } from "./helpers.ts";
 
 export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
