@@ -10,6 +10,8 @@ export interface RepoInfo {
   stars: number;
   forks: number;
   languages: Array<{ name: string; size: number; percentage: number }>;
+  userCommits: number;
+  totalCommits: number;
 }
 
 export interface YearlyContributions {

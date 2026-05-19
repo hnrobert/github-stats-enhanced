@@ -1,4 +1,4 @@
-import { graphql, fetchUser, fetchAllRepos, fetchYearCommits } from "./client.ts";
+import { graphql, fetchUser, fetchAllRepos, fetchYearCommits, fetchCommitCount } from "./client.ts";
 import { CONTRIBUTIONS_QUERY } from "./queries.ts";
 import type {
   GitHubStats,
@@ -38,16 +38,54 @@ export async function fetchGitHubStats(
 
   const langMap = new Map<string, number>();
 
+  // Collect all unique repos and fetch their total commit counts via REST (parallel)
+  const allRepoKeys = new Set<string>();
+  for (const r of ownRepos) allRepoKeys.add(`${r.owner.login}/${r.name}`);
+  for (const cr of lastYear.commitContributionsByRepository) {
+    allRepoKeys.add(`${cr.repository.owner.login}/${cr.repository.name}`);
+  }
+  const totalCommitsMap = new Map<string, number>();
+  await Promise.all(
+    Array.from(allRepoKeys).map(async (key) => {
+      const slash = key.indexOf("/");
+      const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
+      totalCommitsMap.set(key, count);
+    })
+  );
+
+  // Build per-repo commit data
+  const commitMap = new Map<string, { userCommits: number; totalCommits: number }>();
+  for (const cr of lastYear.commitContributionsByRepository) {
+    const key = `${cr.repository.owner.login}/${cr.repository.name}`;
+    commitMap.set(key, {
+      userCommits:  cr.contributions.totalCount,
+      totalCommits: totalCommitsMap.get(key) ?? 0,
+    });
+  }
+
+  // Build per-repo weight = userCommits / totalCommits ratio (relative weight for lang bytes)
+  const repoWeight = new Map<string, number>();
+  for (const [key, { userCommits, totalCommits }] of commitMap) {
+    const weight = totalCommits > 0 ? Math.min(userCommits / totalCommits, 1) : 0;
+    repoWeight.set(key, weight);
+  }
+
+  // Accumulate language bytes weighted by the user's commit ratio
   for (const repo of ownRepos) {
+    const key    = `${repo.owner.login}/${repo.name}`;
+    const weight = repoWeight.get(key) ?? 1; // own repos not in last-year list default to 1
+    if (repo.languages.edges.length === 0) continue;
     for (const edge of repo.languages.edges) {
-      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
     }
   }
 
+  // Also include repos the user contributed to but doesn't own
   for (const cr of lastYear.commitContributionsByRepository) {
-    const commits = cr.contributions.totalCount;
-    if (commits === 0) continue;
-    const weight = Math.min(commits / 100, 0.8);
+    const key = `${cr.repository.owner.login}/${cr.repository.name}`;
+    if (cr.repository.owner.login === username) continue; // already handled via ownRepos
+    const weight = repoWeight.get(key) ?? 0;
+    if (weight === 0) continue;
     for (const edge of cr.repository.languages.edges) {
       langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
     }
@@ -66,6 +104,8 @@ export async function fetchGitHubStats(
     .map((r: RawRepo) => {
       const edges = r.languages.edges;
       const repoTotal = edges.reduce((s, e) => s + e.size, 0);
+      const key = `${r.owner.login}/${r.name}`;
+      const cm  = commitMap.get(key);
       return {
         name:  r.name,
         owner: r.owner.login,
@@ -76,6 +116,8 @@ export async function fetchGitHubStats(
           size: e.size,
           percentage: repoTotal > 0 ? Math.round((e.size / repoTotal) * 1000) / 10 : 0,
         })),
+        userCommits:  cm?.userCommits ?? 0,
+        totalCommits: totalCommitsMap.get(key) ?? 0,
       };
     })
     .sort((a, b) => b.stars - a.stars);

@@ -195,7 +195,7 @@ var CONTRIBUTIONS_QUERY = `
 var REPOS_PAGE_QUERY = `
   query($username: String!, $after: String) {
     user(login: $username) {
-      repositories(first: 100, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false, after: $after) {
+      repositories(first: 50, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false, after: $after) {
         pageInfo { hasNextPage endCursor }
         nodes {
           name
@@ -236,8 +236,11 @@ async function graphql(token, query, variables) {
     headers: HEADERS(token),
     body: JSON.stringify({ query, variables })
   });
-  if (!res.ok)
-    throw new Error(`GraphQL request failed: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`GraphQL request failed: ${res.status}
+${text}`);
+  }
   const body = await res.json();
   if (body.errors)
     throw new Error(`GraphQL errors: ${JSON.stringify(body.errors)}`);
@@ -263,6 +266,17 @@ async function fetchAllRepos(token, username) {
     cursor = repoPage.pageInfo.hasNextPage ? repoPage.pageInfo.endCursor : null;
   } while (cursor);
   return repos;
+}
+async function fetchCommitCount(token, owner, repo) {
+  const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`, { headers: HEADERS(token) });
+  if (!res.ok)
+    return 0;
+  const link = res.headers.get("link") ?? "";
+  const match = link.match(/[?&]page=(\d+)>; rel="last"/);
+  if (match)
+    return parseInt(match[1], 10);
+  const body = await res.json();
+  return body.length;
 }
 async function fetchYearCommits(token, username, year) {
   const from = new Date(`${year}-01-01T00:00:00Z`).toISOString();
@@ -291,16 +305,47 @@ async function fetchGitHubStats(token, username) {
   const totalStars = ownRepos.reduce((s, r) => s + r.stargazerCount, 0);
   const totalForks = ownRepos.reduce((s, r) => s + r.forkCount, 0);
   const langMap = new Map;
+  const allRepoKeys = new Set;
+  for (const r of ownRepos)
+    allRepoKeys.add(`${r.owner.login}/${r.name}`);
+  for (const cr of lastYear.commitContributionsByRepository) {
+    allRepoKeys.add(`${cr.repository.owner.login}/${cr.repository.name}`);
+  }
+  const totalCommitsMap = new Map;
+  await Promise.all(Array.from(allRepoKeys).map(async (key) => {
+    const slash = key.indexOf("/");
+    const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
+    totalCommitsMap.set(key, count);
+  }));
+  const commitMap = new Map;
+  for (const cr of lastYear.commitContributionsByRepository) {
+    const key = `${cr.repository.owner.login}/${cr.repository.name}`;
+    commitMap.set(key, {
+      userCommits: cr.contributions.totalCount,
+      totalCommits: totalCommitsMap.get(key) ?? 0
+    });
+  }
+  const repoWeight = new Map;
+  for (const [key, { userCommits, totalCommits: totalCommits2 }] of commitMap) {
+    const weight = totalCommits2 > 0 ? Math.min(userCommits / totalCommits2, 1) : 0;
+    repoWeight.set(key, weight);
+  }
   for (const repo of ownRepos) {
+    const key = `${repo.owner.login}/${repo.name}`;
+    const weight = repoWeight.get(key) ?? 1;
+    if (repo.languages.edges.length === 0)
+      continue;
     for (const edge of repo.languages.edges) {
-      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
     }
   }
   for (const cr of lastYear.commitContributionsByRepository) {
-    const commits = cr.contributions.totalCount;
-    if (commits === 0)
+    const key = `${cr.repository.owner.login}/${cr.repository.name}`;
+    if (cr.repository.owner.login === username)
       continue;
-    const weight = Math.min(commits / 100, 0.8);
+    const weight = repoWeight.get(key) ?? 0;
+    if (weight === 0)
+      continue;
     for (const edge of cr.repository.languages.edges) {
       langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
     }
@@ -314,6 +359,8 @@ async function fetchGitHubStats(token, username) {
   const repos = ownRepos.map((r) => {
     const edges = r.languages.edges;
     const repoTotal = edges.reduce((s, e) => s + e.size, 0);
+    const key = `${r.owner.login}/${r.name}`;
+    const cm = commitMap.get(key);
     return {
       name: r.name,
       owner: r.owner.login,
@@ -323,7 +370,9 @@ async function fetchGitHubStats(token, username) {
         name: e.node.name,
         size: e.size,
         percentage: repoTotal > 0 ? Math.round(e.size / repoTotal * 1000) / 10 : 0
-      }))
+      })),
+      userCommits: cm?.userCommits ?? 0,
+      totalCommits: totalCommitsMap.get(key) ?? 0
     };
   }).sort((a, b) => b.stars - a.stars);
   return {
@@ -3318,8 +3367,9 @@ function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
     <text x="${leftCX}" y="${labelY}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">Total Commits</text>
     </g>`;
-  const rightCX = halfW + halfW / 2;
-  const titleFontSize = 14;
+  const rightStart = halfW;
+  const rightW = W - rightStart;
+  const titleFontSize = 13;
   const titleCapH = titleFontSize * 0.72;
   const gridNumFontSize = 19;
   const gridLabelFontSize = 11;
@@ -3338,11 +3388,14 @@ function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
     { label: "Issues", value: formatNumber(yc.issues) },
     { label: "Reviews", value: formatNumber(yc.reviews) }
   ];
-  const cellW = halfW / 2;
+  const cellW = rightW / 2;
+  const col0CX = rightStart + cellW / 2;
+  const col1CX = rightStart + cellW + cellW / 2;
+  const gridCX = (col0CX + col1CX) / 2;
   const gridCells = breakdown.map((item, i2) => {
     const col = i2 % 2;
     const row = Math.floor(i2 / 2);
-    const cx = halfW + col * cellW + cellW / 2;
+    const cx = col === 0 ? col0CX : col1CX;
     const rowTop = gridStartY + row * (gridItemH + rowGap);
     const nY = rowTop + gridNumCapH;
     const lY = nY + 6 + gridLabelCapH;
@@ -3356,13 +3409,18 @@ function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
   }).join("");
   const rightSection = `
     <g class="title">
-    <text x="${rightCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
+    <text x="${gridCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
     </g>
     ${gridCells}`;
+  const divH = H * 2 / 3;
+  const divY1 = (H - divH) / 2;
+  const divider = `<line x1="${halfW}" y1="${divY1}" x2="${halfW}" y2="${divY1 + divH}"
+    stroke="${c.border}" stroke-width="1"/>`;
   return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${divider}
   ${leftSection}
   ${rightSection}
 </svg>`;
@@ -3589,11 +3647,11 @@ function setFailed(message) {
 }
 
 // src/generate.ts
-function filterStats(stats, excludeLanguages, excludeRepos) {
-  if (excludeLanguages.length === 0 && excludeRepos.length === 0)
+function filterLanguageStats(stats, opts) {
+  const exLangs = new Set(opts.excludeLanguages ?? []);
+  const exRepos = new Set(opts.excludeRepos ?? []);
+  if (exLangs.size === 0 && exRepos.size === 0)
     return stats;
-  const exLangs = new Set(excludeLanguages);
-  const exRepos = new Set(excludeRepos);
   const filteredRepos = stats.repos.filter((r) => !exRepos.has(`${r.owner}/${r.name}`));
   const totalStars = filteredRepos.reduce((s, r) => s + r.stars, 0);
   const totalForks = filteredRepos.reduce((s, r) => s + r.forks, 0);
@@ -3617,24 +3675,37 @@ function filterStats(stats, excludeLanguages, excludeRepos) {
     repos: filteredRepos
   };
 }
-function generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts) {
+function filterContributionStats(stats, opts) {
+  const exRepos = new Set(opts.excludeRepos ?? []);
+  if (exRepos.size === 0)
+    return stats;
+  const filteredRepos = stats.repos.filter((r) => !exRepos.has(`${r.owner}/${r.name}`));
+  const totalStars = filteredRepos.reduce((s, r) => s + r.stars, 0);
+  const totalForks = filteredRepos.reduce((s, r) => s + r.forks, 0);
+  return {
+    ...stats,
+    stats: { ...stats.stats, totalStars, totalForks },
+    repos: filteredRepos
+  };
+}
+function generateSvgs(langStats, contribStats, outputDir, theme, statsOpts, contribOpts, langOpts) {
   const outputs = [
-    { name: "stats1.svg", content: generateStatsCard1(stats, theme, statsOpts) },
-    { name: "stats1-adaptive.svg", content: generateStatsCard1(stats, "adaptive", statsOpts) },
-    { name: "stats1-dark.svg", content: generateStatsCard1(stats, "dark", statsOpts) },
-    { name: "stats1-light.svg", content: generateStatsCard1(stats, "light", statsOpts) },
-    { name: "stats2.svg", content: generateStatsCard2(stats, theme, statsOpts) },
-    { name: "stats2-adaptive.svg", content: generateStatsCard2(stats, "adaptive", statsOpts) },
-    { name: "stats2-dark.svg", content: generateStatsCard2(stats, "dark", statsOpts) },
-    { name: "stats2-light.svg", content: generateStatsCard2(stats, "light", statsOpts) },
-    { name: "contributions.svg", content: generateContributionsCard(stats, theme, contribOpts) },
-    { name: "contributions-adaptive.svg", content: generateContributionsCard(stats, "adaptive", contribOpts) },
-    { name: "contributions-dark.svg", content: generateContributionsCard(stats, "dark", contribOpts) },
-    { name: "contributions-light.svg", content: generateContributionsCard(stats, "light", contribOpts) },
-    { name: "languages.svg", content: generateLanguagesCard(stats, theme, langOpts) },
-    { name: "languages-adaptive.svg", content: generateLanguagesCard(stats, "adaptive", langOpts) },
-    { name: "languages-dark.svg", content: generateLanguagesCard(stats, "dark", langOpts) },
-    { name: "languages-light.svg", content: generateLanguagesCard(stats, "light", langOpts) }
+    { name: "stats1.svg", content: generateStatsCard1(langStats, theme, statsOpts) },
+    { name: "stats1-adaptive.svg", content: generateStatsCard1(langStats, "adaptive", statsOpts) },
+    { name: "stats1-dark.svg", content: generateStatsCard1(langStats, "dark", statsOpts) },
+    { name: "stats1-light.svg", content: generateStatsCard1(langStats, "light", statsOpts) },
+    { name: "stats2.svg", content: generateStatsCard2(langStats, theme, statsOpts) },
+    { name: "stats2-adaptive.svg", content: generateStatsCard2(langStats, "adaptive", statsOpts) },
+    { name: "stats2-dark.svg", content: generateStatsCard2(langStats, "dark", statsOpts) },
+    { name: "stats2-light.svg", content: generateStatsCard2(langStats, "light", statsOpts) },
+    { name: "contributions.svg", content: generateContributionsCard(contribStats, theme, contribOpts) },
+    { name: "contributions-adaptive.svg", content: generateContributionsCard(contribStats, "adaptive", contribOpts) },
+    { name: "contributions-dark.svg", content: generateContributionsCard(contribStats, "dark", contribOpts) },
+    { name: "contributions-light.svg", content: generateContributionsCard(contribStats, "light", contribOpts) },
+    { name: "languages.svg", content: generateLanguagesCard(langStats, theme, langOpts) },
+    { name: "languages-adaptive.svg", content: generateLanguagesCard(langStats, "adaptive", langOpts) },
+    { name: "languages-dark.svg", content: generateLanguagesCard(langStats, "dark", langOpts) },
+    { name: "languages-light.svg", content: generateLanguagesCard(langStats, "light", langOpts) }
   ];
   for (const { name, content } of outputs) {
     const filePath = path.join(outputDir, name);
@@ -3689,6 +3760,20 @@ function buildCardOpts(responsive) {
   };
 }
 // src/index.ts
+function parseList(input) {
+  return input.split(",").map((s) => s.trim()).filter(Boolean);
+}
+function readFilterOptions() {
+  return {
+    langFilter: {
+      excludeLanguages: parseList(getInput("exclude_languages")),
+      excludeRepos: parseList(getInput("exclude_repos"))
+    },
+    contribFilter: {
+      excludeRepos: parseList(getInput("contrib_exclude_repos"))
+    }
+  };
+}
 (async () => {
   try {
     const mode = getInput("mode") || "all";
@@ -3711,13 +3796,13 @@ function buildCardOpts(responsive) {
       writeStatsYaml(dataFile, stats);
       log(`\uD83D\uDCC4 Stats saved to ${dataFile}`);
       if (mode === "all") {
-        const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
-        const excludeRepos = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
-        const filtered = filterStats(stats, excludeLanguages, excludeRepos);
-        generateSvgs(filtered, outputDir, theme, statsOpts, contribOpts, langOpts);
+        const { langFilter, contribFilter } = readFilterOptions();
+        const langFiltered = filterLanguageStats(stats, langFilter);
+        const contribFiltered = filterContributionStats(stats, contribFilter);
+        generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
-          generateReport(filtered, outputDir);
-          generateDemo(filtered);
+          generateReport(langFiltered, outputDir);
+          generateDemo(langFiltered);
         }
         log(`
 README usage (adaptive theme):`);
@@ -3730,13 +3815,14 @@ README usage (adaptive theme):`);
       if (!fs2.existsSync(dataFile))
         throw new Error(`data_file not found: ${dataFile}`);
       log(`\uD83D\uDCC4 Loading stats from ${dataFile}`);
-      const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
-      const excludeRepos = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
-      const filtered = filterStats(readStatsYaml(dataFile), excludeLanguages, excludeRepos);
-      generateSvgs(filtered, outputDir, theme, statsOpts, contribOpts, langOpts);
+      const raw = readStatsYaml(dataFile);
+      const { langFilter, contribFilter } = readFilterOptions();
+      const langFiltered = filterLanguageStats(raw, langFilter);
+      const contribFiltered = filterContributionStats(raw, contribFilter);
+      generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
       if (withReport) {
-        generateReport(filtered, outputDir);
-        generateDemo(filtered);
+        generateReport(langFiltered, outputDir);
+        generateDemo(langFiltered);
       }
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);

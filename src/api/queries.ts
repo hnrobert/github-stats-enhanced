@@ -35,7 +35,7 @@ export const CONTRIBUTIONS_QUERY = `
 export const REPOS_PAGE_QUERY = `
   query($username: String!, $after: String) {
     user(login: $username) {
-      repositories(first: 100, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false, after: $after) {
+      repositories(first: 50, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false, after: $after) {
         pageInfo { hasNextPage endCursor }
         nodes {
           name

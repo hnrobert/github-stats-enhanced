@@ -22,7 +22,10 @@ export async function graphql<T>(
     headers: HEADERS(token),
     body: JSON.stringify({ query, variables }),
   });
-  if (!res.ok) throw new Error(`GraphQL request failed: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`GraphQL request failed: ${res.status}\n${text}`);
+  }
   const body = await res.json() as { data?: T; errors?: unknown[] };
   if (body.errors) throw new Error(`GraphQL errors: ${JSON.stringify(body.errors)}`);
   if (body.data === undefined) throw new Error("GraphQL response missing data");
@@ -47,6 +50,19 @@ export async function fetchAllRepos(token: string, username: string): Promise<Ra
     cursor = repoPage.pageInfo.hasNextPage ? repoPage.pageInfo.endCursor : null;
   } while (cursor);
   return repos;
+}
+
+export async function fetchCommitCount(token: string, owner: string, repo: string): Promise<number> {
+  const res = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`,
+    { headers: HEADERS(token) }
+  );
+  if (!res.ok) return 0;
+  const link = res.headers.get("link") ?? "";
+  const match = link.match(/[?&]page=(\d+)>; rel="last"/);
+  if (match) return parseInt(match[1], 10);
+  const body = await res.json() as unknown[];
+  return body.length; // 0 or 1 commit
 }
 
 export async function fetchYearCommits(
