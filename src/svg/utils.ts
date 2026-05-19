@@ -79,6 +79,7 @@ export function getCardStyle(theme: Theme): string {
     .i1{animation:fadeUp .45s .24s ${ease} both}
     .i2{animation:fadeUp .45s .34s ${ease} both}
     .i3{animation:fadeUp .45s .44s ${ease} both}
+    .i4{animation:fadeUp .45s .54s ${ease} both}
     .bar{animation:fadeIn .3s .25s ease both}
   </style>`;
 }
