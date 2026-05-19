@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fetchGitHubStats } from "./api/index.ts";
 import { writeStatsYaml, readStatsYaml } from "./data.ts";
-import { generateSvgs, generateReport, generateDemo } from "./generate.ts";
+import { generateSvgs, generateReport, generateDemo, filterStats } from "./generate.ts";
 import { getInput, getBoolInput, buildCardOpts, log, setFailed } from "./action/index.ts";
 import type { Theme } from "./svg/theme.ts";
 
@@ -20,24 +20,24 @@ import type { Theme } from "./svg/theme.ts";
     if (mode === "fetch" || mode === "all") {
       const username         = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
       const token            = process.env.GITHUB_TOKEN || getInput("github_token");
-      const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
-      const excludeRepos     = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
-
       if (!username) throw new Error("github_user_name is required");
       if (!token)    throw new Error("GITHUB_TOKEN is required");
 
       log(`📊 Fetching GitHub stats for: ${username}`);
-      const stats = await fetchGitHubStats(token, username, { excludeLanguages, excludeRepos });
+      const stats = await fetchGitHubStats(token, username);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
 
       writeStatsYaml(dataFile, stats);
       log(`📄 Stats saved to ${dataFile}`);
 
       if (mode === "all") {
-        generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
+        const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
+        const excludeRepos     = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
+        const filtered = filterStats(stats, excludeLanguages, excludeRepos);
+        generateSvgs(filtered, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
-          generateReport(stats, outputDir);
-          generateDemo(stats);
+          generateReport(filtered, outputDir);
+          generateDemo(filtered);
         }
         log(`\nREADME usage (adaptive theme):`);
         log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats1-adaptive.svg)`);
@@ -48,11 +48,13 @@ import type { Theme } from "./svg/theme.ts";
     } else if (mode === "generate") {
       if (!fs.existsSync(dataFile)) throw new Error(`data_file not found: ${dataFile}`);
       log(`📄 Loading stats from ${dataFile}`);
-      const stats = readStatsYaml(dataFile);
-      generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
+      const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
+      const excludeRepos     = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
+      const filtered = filterStats(readStatsYaml(dataFile), excludeLanguages, excludeRepos);
+      generateSvgs(filtered, outputDir, theme, statsOpts, contribOpts, langOpts);
       if (withReport) {
-        generateReport(stats, outputDir);
-        generateDemo(stats);
+        generateReport(filtered, outputDir);
+        generateDemo(filtered);
       }
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);

@@ -264,19 +264,15 @@ async function fetchAllRepos(token, username) {
   } while (cursor);
   return repos;
 }
-async function fetchYearCommits(token, username, year, excludeRepos) {
+async function fetchYearCommits(token, username, year) {
   const from = new Date(`${year}-01-01T00:00:00Z`).toISOString();
   const to = new Date(`${year}-12-31T23:59:59Z`).toISOString();
   const data = await graphql(token, YEAR_COMMITS_QUERY, { username, from, to });
-  const col = data.user.contributionsCollection;
-  const excluded = col.commitContributionsByRepository.filter((r) => excludeRepos.has(r.repository.nameWithOwner)).reduce((s, r) => s + r.contributions.totalCount, 0);
-  return col.totalCommitContributions - excluded;
+  return data.user.contributionsCollection.totalCommitContributions;
 }
 
 // src/api/index.ts
-async function fetchGitHubStats(token, username, options = {}) {
-  const excludeLanguages = new Set(options.excludeLanguages ?? []);
-  const excludeRepos = new Set(options.excludeRepos ?? []);
+async function fetchGitHubStats(token, username) {
   const oneYearAgo = new Date;
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const [userData, data, ownRepos] = await Promise.all([
@@ -290,30 +286,23 @@ async function fetchGitHubStats(token, username, options = {}) {
   const currentYear = new Date().getFullYear();
   let totalCommits = 0;
   for (let y = createdYear;y <= currentYear; y++) {
-    totalCommits += await fetchYearCommits(token, username, y, excludeRepos);
+    totalCommits += await fetchYearCommits(token, username, y);
   }
   const totalStars = ownRepos.reduce((s, r) => s + r.stargazerCount, 0);
   const totalForks = ownRepos.reduce((s, r) => s + r.forkCount, 0);
   const langMap = new Map;
   for (const repo of ownRepos) {
-    if (excludeRepos.has(`${repo.owner.login}/${repo.name}`))
-      continue;
     for (const edge of repo.languages.edges) {
-      if (!excludeLanguages.has(edge.node.name))
-        langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
     }
   }
   for (const cr of lastYear.commitContributionsByRepository) {
-    const repoName = `${cr.repository.owner.login}/${cr.repository.name}`;
-    if (excludeRepos.has(repoName))
-      continue;
     const commits = cr.contributions.totalCount;
     if (commits === 0)
       continue;
     const weight = Math.min(commits / 100, 0.8);
     for (const edge of cr.repository.languages.edges) {
-      if (!excludeLanguages.has(edge.node.name))
-        langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
     }
   }
   const totalLangSize = Array.from(langMap.values()).reduce((s, v) => s + v, 0);
@@ -321,8 +310,8 @@ async function fetchGitHubStats(token, username, options = {}) {
     language,
     count,
     percentage: totalLangSize > 0 ? Math.round(count / totalLangSize * 1e4) / 100 : 0
-  })).sort((a, b) => b.count - a.count).slice(0, 8);
-  const repos = ownRepos.filter((r) => !excludeRepos.has(`${r.owner.login}/${r.name}`)).map((r) => {
+  })).sort((a, b) => b.count - a.count);
+  const repos = ownRepos.map((r) => {
     const edges = r.languages.edges;
     const repoTotal = edges.reduce((s, e) => s + e.size, 0);
     return {
@@ -330,7 +319,7 @@ async function fetchGitHubStats(token, username, options = {}) {
       owner: r.owner.login,
       stars: r.stargazerCount,
       forks: r.forkCount,
-      languages: edges.filter((e) => !excludeLanguages.has(e.node.name)).map((e) => ({
+      languages: edges.map((e) => ({
         name: e.node.name,
         size: e.size,
         percentage: repoTotal > 0 ? Math.round(e.size / repoTotal * 1000) / 10 : 0
@@ -3442,38 +3431,122 @@ function buildReport(stats) {
 // index.html
 var github_stats_enhanced_default = `<!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GitHub Stats — Robert He</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     :root {
-      --bg: #0f172a; --border: rgba(255,255,255,0.1); --text: #f8fafc; --muted: #94a3b8; --accent: #60a5fa;
+      --bg: #0f172a;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
     }
+
     @media (prefers-color-scheme: light) {
-      :root { --bg: #f1f5f9; --border: rgba(0,0,0,0.08); --text: #1e293b; --muted: #64748b; --accent: #3b82f6; }
+      :root {
+        --bg: #f1f5f9;
+        --border: rgba(0, 0, 0, 0.08);
+        --text: #1e293b;
+        --muted: #64748b;
+        --accent: #3b82f6;
+      }
     }
-    body { background: var(--bg); color: var(--text);
+
+    body {
+      background: var(--bg);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      padding: 2rem 1.5rem; }
-    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
-    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 3rem; }
-    h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.4rem; }
-    .desc { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
-    .tag { display: inline-block; background: rgba(96,165,250,0.15); color: var(--accent);
-      border: 1px solid rgba(96,165,250,0.3); border-radius: 4px;
-      font-size: 0.75rem; font-weight: 600; padding: 1px 7px; margin-left: 8px; vertical-align: middle; }
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 1.25rem; }
-    @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
-    .resizable { resize: horizontal; overflow: hidden;
-      border: 1px dashed var(--border); border-radius: 12px;
-      padding: 1.25rem; min-width: 280px; max-width: 100%; width: 100%; }
-    .resize-hint { color: var(--muted); font-size: 0.78rem; margin-bottom: 1rem; }
-    .spacer { margin-top: 1.25rem; }
-    img { display: block; width: 100%; }
+      padding: 2rem 1.5rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 3rem;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .desc {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .tag {
+      display: inline-block;
+      background: rgba(96, 165, 250, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 1px 7px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 2fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .resizable {
+      resize: horizontal;
+      overflow: hidden;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      min-width: 280px;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .resize-hint {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 1rem;
+    }
+
+    .spacer {
+      margin-top: 1.25rem;
+    }
+
+    img {
+      display: block;
+      width: 100%;
+    }
   </style>
 </head>
+
 <body>
   <h1>GitHub Stats — Robert He</h1>
   <p class="subtitle">Drag the right edge to see responsive scaling</p>
@@ -3483,17 +3556,21 @@ var github_stats_enhanced_default = `<!DOCTYPE html>
   <div class="resizable">
     <p class="resize-hint">↔ drag right edge to resize</p>
     <div class="stats-grid">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-adaptive.svg" alt="Stats 1">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-adaptive.svg" alt="Stats 2">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-adaptive.svg" alt="Contributions">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-adaptive.svg"
+        alt="Stats 1">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-adaptive.svg"
+        alt="Stats 2">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-adaptive.svg"
+        alt="Contributions">
     </div>
     <div class="spacer">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-adaptive.svg" alt="Languages">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-adaptive.svg"
+        alt="Languages">
     </div>
   </div>
 </body>
-</html>
-`;
+
+</html>`;
 
 // src/demo.ts
 var template = github_stats_enhanced_default;
@@ -3512,6 +3589,34 @@ function setFailed(message) {
 }
 
 // src/generate.ts
+function filterStats(stats, excludeLanguages, excludeRepos) {
+  if (excludeLanguages.length === 0 && excludeRepos.length === 0)
+    return stats;
+  const exLangs = new Set(excludeLanguages);
+  const exRepos = new Set(excludeRepos);
+  const filteredRepos = stats.repos.filter((r) => !exRepos.has(`${r.owner}/${r.name}`));
+  const totalStars = filteredRepos.reduce((s, r) => s + r.stars, 0);
+  const totalForks = filteredRepos.reduce((s, r) => s + r.forks, 0);
+  const langMap = new Map;
+  for (const repo of filteredRepos) {
+    for (const lang of repo.languages) {
+      if (exLangs.has(lang.name))
+        continue;
+      langMap.set(lang.name, (langMap.get(lang.name) ?? 0) + lang.size);
+    }
+  }
+  const totalSize = Array.from(langMap.values()).reduce((s, v) => s + v, 0);
+  const languageStats = Array.from(langMap.entries()).map(([language, count]) => ({
+    language,
+    count,
+    percentage: totalSize > 0 ? Math.round(count / totalSize * 1e4) / 100 : 0
+  })).sort((a, b) => b.count - a.count);
+  return {
+    ...stats,
+    stats: { ...stats.stats, totalStars, totalForks, languageStats },
+    repos: filteredRepos
+  };
+}
 function generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts) {
   const outputs = [
     { name: "stats1.svg", content: generateStatsCard1(stats, theme, statsOpts) },
@@ -3596,22 +3701,23 @@ function buildCardOpts(responsive) {
     if (mode === "fetch" || mode === "all") {
       const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
       const token = process.env.GITHUB_TOKEN || getInput("github_token");
-      const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
-      const excludeRepos = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
       if (!username)
         throw new Error("github_user_name is required");
       if (!token)
         throw new Error("GITHUB_TOKEN is required");
       log(`\uD83D\uDCCA Fetching GitHub stats for: ${username}`);
-      const stats = await fetchGitHubStats(token, username, { excludeLanguages, excludeRepos });
+      const stats = await fetchGitHubStats(token, username);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
       writeStatsYaml(dataFile, stats);
       log(`\uD83D\uDCC4 Stats saved to ${dataFile}`);
       if (mode === "all") {
-        generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
+        const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
+        const excludeRepos = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
+        const filtered = filterStats(stats, excludeLanguages, excludeRepos);
+        generateSvgs(filtered, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
-          generateReport(stats, outputDir);
-          generateDemo(stats);
+          generateReport(filtered, outputDir);
+          generateDemo(filtered);
         }
         log(`
 README usage (adaptive theme):`);
@@ -3624,11 +3730,13 @@ README usage (adaptive theme):`);
       if (!fs2.existsSync(dataFile))
         throw new Error(`data_file not found: ${dataFile}`);
       log(`\uD83D\uDCC4 Loading stats from ${dataFile}`);
-      const stats = readStatsYaml(dataFile);
-      generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
+      const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
+      const excludeRepos = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
+      const filtered = filterStats(readStatsYaml(dataFile), excludeLanguages, excludeRepos);
+      generateSvgs(filtered, outputDir, theme, statsOpts, contribOpts, langOpts);
       if (withReport) {
-        generateReport(stats, outputDir);
-        generateDemo(stats);
+        generateReport(filtered, outputDir);
+        generateDemo(filtered);
       }
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);

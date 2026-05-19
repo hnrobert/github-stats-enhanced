@@ -12,12 +12,8 @@ export type { GitHubStats, LanguageStat, RepoInfo, YearlyContributions } from ".
 
 export async function fetchGitHubStats(
   token: string,
-  username: string,
-  options: { excludeLanguages?: string[]; excludeRepos?: string[] } = {}
+  username: string
 ): Promise<GitHubStats> {
-  const excludeLanguages = new Set(options.excludeLanguages ?? []);
-  const excludeRepos     = new Set(options.excludeRepos ?? []);
-
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
@@ -34,7 +30,7 @@ export async function fetchGitHubStats(
   const currentYear = new Date().getFullYear();
   let totalCommits = 0;
   for (let y = createdYear; y <= currentYear; y++) {
-    totalCommits += await fetchYearCommits(token, username, y, excludeRepos);
+    totalCommits += await fetchYearCommits(token, username, y);
   }
 
   const totalStars = ownRepos.reduce((s, r) => s + r.stargazerCount, 0);
@@ -43,22 +39,17 @@ export async function fetchGitHubStats(
   const langMap = new Map<string, number>();
 
   for (const repo of ownRepos) {
-    if (excludeRepos.has(`${repo.owner.login}/${repo.name}`)) continue;
     for (const edge of repo.languages.edges) {
-      if (!excludeLanguages.has(edge.node.name))
-        langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
     }
   }
 
   for (const cr of lastYear.commitContributionsByRepository) {
-    const repoName = `${cr.repository.owner.login}/${cr.repository.name}`;
-    if (excludeRepos.has(repoName)) continue;
     const commits = cr.contributions.totalCount;
     if (commits === 0) continue;
     const weight = Math.min(commits / 100, 0.8);
     for (const edge of cr.repository.languages.edges) {
-      if (!excludeLanguages.has(edge.node.name))
-        langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
     }
   }
 
@@ -69,11 +60,9 @@ export async function fetchGitHubStats(
       count,
       percentage: totalLangSize > 0 ? Math.round((count / totalLangSize) * 10000) / 100 : 0,
     }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8);
+    .sort((a, b) => b.count - a.count);
 
   const repos: RepoInfo[] = ownRepos
-    .filter((r: RawRepo) => !excludeRepos.has(`${r.owner.login}/${r.name}`))
     .map((r: RawRepo) => {
       const edges = r.languages.edges;
       const repoTotal = edges.reduce((s, e) => s + e.size, 0);
@@ -82,13 +71,11 @@ export async function fetchGitHubStats(
         owner: r.owner.login,
         stars: r.stargazerCount,
         forks: r.forkCount,
-        languages: edges
-          .filter((e) => !excludeLanguages.has(e.node.name))
-          .map((e) => ({
-            name: e.node.name,
-            size: e.size,
-            percentage: repoTotal > 0 ? Math.round((e.size / repoTotal) * 1000) / 10 : 0,
-          })),
+        languages: edges.map((e) => ({
+          name: e.node.name,
+          size: e.size,
+          percentage: repoTotal > 0 ? Math.round((e.size / repoTotal) * 1000) / 10 : 0,
+        })),
       };
     })
     .sort((a, b) => b.stars - a.stars);

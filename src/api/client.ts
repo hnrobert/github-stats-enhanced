@@ -52,15 +52,10 @@ export async function fetchAllRepos(token: string, username: string): Promise<Ra
 export async function fetchYearCommits(
   token: string,
   username: string,
-  year: number,
-  excludeRepos: Set<string>
+  year: number
 ): Promise<number> {
   const from = new Date(`${year}-01-01T00:00:00Z`).toISOString();
   const to   = new Date(`${year}-12-31T23:59:59Z`).toISOString();
   const data = await graphql<RawYearCommitsResponse>(token, YEAR_COMMITS_QUERY, { username, from, to });
-  const col = data.user.contributionsCollection;
-  const excluded = col.commitContributionsByRepository
-    .filter((r) => excludeRepos.has(r.repository.nameWithOwner))
-    .reduce((s, r) => s + r.contributions.totalCount, 0);
-  return col.totalCommitContributions - excluded;
+  return data.user.contributionsCollection.totalCommitContributions;
 }

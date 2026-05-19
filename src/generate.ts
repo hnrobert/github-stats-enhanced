@@ -8,7 +8,44 @@ import { buildDemo } from "./demo.ts";
 import { log } from "./action/logger.ts";
 import type { Theme } from "./svg/theme.ts";
 import type { CardOptions } from "./svg/helpers.ts";
-import type { GitHubStats } from "./api/types.ts";
+import type { GitHubStats, LanguageStat } from "./api/types.ts";
+
+export function filterStats(
+  stats: GitHubStats,
+  excludeLanguages: string[],
+  excludeRepos: string[]
+): GitHubStats {
+  if (excludeLanguages.length === 0 && excludeRepos.length === 0) return stats;
+
+  const exLangs = new Set(excludeLanguages);
+  const exRepos = new Set(excludeRepos);
+
+  const filteredRepos = stats.repos.filter((r) => !exRepos.has(`${r.owner}/${r.name}`));
+  const totalStars    = filteredRepos.reduce((s, r) => s + r.stars, 0);
+  const totalForks    = filteredRepos.reduce((s, r) => s + r.forks, 0);
+
+  const langMap = new Map<string, number>();
+  for (const repo of filteredRepos) {
+    for (const lang of repo.languages) {
+      if (exLangs.has(lang.name)) continue;
+      langMap.set(lang.name, (langMap.get(lang.name) ?? 0) + lang.size);
+    }
+  }
+  const totalSize = Array.from(langMap.values()).reduce((s, v) => s + v, 0);
+  const languageStats: LanguageStat[] = Array.from(langMap.entries())
+    .map(([language, count]) => ({
+      language,
+      count,
+      percentage: totalSize > 0 ? Math.round((count / totalSize) * 10000) / 100 : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    ...stats,
+    stats: { ...stats.stats, totalStars, totalForks, languageStats },
+    repos: filteredRepos,
+  };
+}
 
 export function generateSvgs(
   stats: GitHubStats,

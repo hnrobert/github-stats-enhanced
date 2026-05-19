@@ -7,7 +7,9 @@
     "build": "bun build src/index.ts --outfile dist/index.js --target node",
     "start": "bun src/index.ts",
     "type-check": "tsc --noEmit",
-    "test:local": "bun scripts/test-local.ts"
+    "test:local": "bun scripts/test-local.ts",
+    "test:fetch": "bun scripts/test-local.ts --fetch-only",
+    "test:generate": "bun scripts/test-local.ts --from-cache"
   },
   "devDependencies": {
     "@types/bun": "latest",

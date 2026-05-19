@@ -5,5 +5,8 @@
         "ghaction",
         "Segoe",
         "svgs"
-    ]
+    ],
+    "markdownlint.config": {
+        "no-emphasis-as-heading": false
+    }
 }
