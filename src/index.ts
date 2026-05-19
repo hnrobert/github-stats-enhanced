@@ -41,7 +41,8 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
       if (!token)    throw new Error("GITHUB_TOKEN is required");
 
       log(`📊 Fetching GitHub stats for: ${username}`);
-      const stats = await fetchGitHubStats(token, username);
+      const weightContributed = getInput("weight_contributed_repos").toLowerCase() !== "false";
+      const stats = await fetchGitHubStats(token, username, weightContributed);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
 
       writeStatsYaml(dataFile, stats);

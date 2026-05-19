@@ -12,7 +12,8 @@ export type { GitHubStats, LanguageStat, RepoInfo, YearlyContributions } from ".
 
 export async function fetchGitHubStats(
   token: string,
-  username: string
+  username: string,
+  weightContributed = true
 ): Promise<GitHubStats> {
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
@@ -38,53 +39,64 @@ export async function fetchGitHubStats(
 
   const langMap = new Map<string, number>();
 
-  // Collect all unique repos and fetch their total commit counts via REST (parallel)
+  // Collect all unique repos
   const allRepoKeys = new Set<string>();
   for (const r of ownRepos) allRepoKeys.add(`${r.owner.login}/${r.name}`);
   for (const cr of lastYear.commitContributionsByRepository) {
     allRepoKeys.add(`${cr.repository.owner.login}/${cr.repository.name}`);
   }
-  const totalCommitsMap = new Map<string, number>();
-  await Promise.all(
-    Array.from(allRepoKeys).map(async (key) => {
+
+  // Fetch total commits for all repos + user's own all-time commits for own repos (parallel)
+  const totalCommitsMap   = new Map<string, number>();
+  const userCommitsOwnMap = new Map<string, number>();
+  await Promise.all([
+    ...Array.from(allRepoKeys).map(async (key) => {
       const slash = key.indexOf("/");
       const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
       totalCommitsMap.set(key, count);
-    })
-  );
+    }),
+    ...ownRepos.map(async (r) => {
+      const key   = `${r.owner.login}/${r.name}`;
+      const count = await fetchCommitCount(token, r.owner.login, r.name, username);
+      userCommitsOwnMap.set(key, count);
+    }),
+  ]);
 
-  // Build per-repo commit data
+  // Build commitMap: own repos use REST all-time counts; contributed repos use last-year counts
   const commitMap = new Map<string, { userCommits: number; totalCommits: number }>();
+  for (const r of ownRepos) {
+    const key = `${r.owner.login}/${r.name}`;
+    commitMap.set(key, {
+      userCommits:  userCommitsOwnMap.get(key) ?? 0,
+      totalCommits: totalCommitsMap.get(key) ?? 0,
+    });
+  }
   for (const cr of lastYear.commitContributionsByRepository) {
     const key = `${cr.repository.owner.login}/${cr.repository.name}`;
+    if (commitMap.has(key)) continue;
     commitMap.set(key, {
       userCommits:  cr.contributions.totalCount,
       totalCommits: totalCommitsMap.get(key) ?? 0,
     });
   }
 
-  // Build per-repo weight = userCommits / totalCommits ratio (relative weight for lang bytes)
-  const repoWeight = new Map<string, number>();
-  for (const [key, { userCommits, totalCommits }] of commitMap) {
-    const weight = totalCommits > 0 ? Math.min(userCommits / totalCommits, 1) : 0;
-    repoWeight.set(key, weight);
-  }
-
-  // Accumulate language bytes weighted by the user's commit ratio
+  // Own repos: always full weight
   for (const repo of ownRepos) {
-    const key    = `${repo.owner.login}/${repo.name}`;
-    const weight = repoWeight.get(key) ?? 1; // own repos not in last-year list default to 1
     if (repo.languages.edges.length === 0) continue;
     for (const edge of repo.languages.edges) {
-      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
     }
   }
 
-  // Also include repos the user contributed to but doesn't own
+  // Contributed repos: weight by commit ratio if weightContributed, else full weight
   for (const cr of lastYear.commitContributionsByRepository) {
     const key = `${cr.repository.owner.login}/${cr.repository.name}`;
-    if (cr.repository.owner.login === username) continue; // already handled via ownRepos
-    const weight = repoWeight.get(key) ?? 0;
+    if (cr.repository.owner.login === username) continue;
+    let weight = 1;
+    if (weightContributed) {
+      const cm = commitMap.get(key);
+      weight = cm && cm.totalCommits > 0 ? Math.min(cm.userCommits / cm.totalCommits, 1) : 0;
+    }
     if (weight === 0) continue;
     for (const edge of cr.repository.languages.edges) {
       langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
@@ -116,8 +128,8 @@ export async function fetchGitHubStats(
           size: e.size,
           percentage: repoTotal > 0 ? Math.round((e.size / repoTotal) * 1000) / 10 : 0,
         })),
-        userCommits:  cm?.userCommits ?? 0,
-        totalCommits: totalCommitsMap.get(key) ?? 0,
+        userCommits:  cm?.userCommits  ?? 0,
+        totalCommits: cm?.totalCommits ?? 0,
       };
     })
     .sort((a, b) => b.stars - a.stars);

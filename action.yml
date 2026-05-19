@@ -69,6 +69,10 @@ inputs:
     description: "Comma-separated list of languages to exclude"
     required: false
     default: ""
+  weight_contributed_repos:
+    description: "Set to 'false' to count contributed (non-own) repo languages at full weight instead of by commit ratio"
+    required: false
+    default: "true"
   generate_report:
     description: "Generate README.md (stats report) and index.html (demo page) alongside SVGs"
     required: false

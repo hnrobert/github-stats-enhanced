@@ -52,9 +52,12 @@ export async function fetchAllRepos(token: string, username: string): Promise<Ra
   return repos;
 }
 
-export async function fetchCommitCount(token: string, owner: string, repo: string): Promise<number> {
+export async function fetchCommitCount(
+  token: string, owner: string, repo: string, author?: string
+): Promise<number> {
+  const authorParam = author ? `&author=${encodeURIComponent(author)}` : "";
   const res = await fetch(
-    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`,
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1${authorParam}`,
     { headers: HEADERS(token) }
   );
   if (!res.ok) return 0;
@@ -62,7 +65,7 @@ export async function fetchCommitCount(token: string, owner: string, repo: strin
   const match = link.match(/[?&]page=(\d+)>; rel="last"/);
   if (match) return parseInt(match[1], 10);
   const body = await res.json() as unknown[];
-  return body.length; // 0 or 1 commit
+  return body.length;
 }
 
 export async function fetchYearCommits(
