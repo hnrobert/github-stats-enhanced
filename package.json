@@ -4,7 +4,7 @@
   "description": "Generate GitHub stats SVG cards via GitHub Actions",
   "type": "module",
   "scripts": {
-    "build": "bun build src/index.ts --outfile dist/index.js --target bun",
+    "build": "bun build src/index.ts --outfile dist/index.js --target node",
     "start": "bun src/index.ts",
     "type-check": "tsc --noEmit"
   },
