@@ -57,7 +57,7 @@ export async function fetchGitHubStats(
     }),
     ...ownRepos.map(async (r) => {
       const key   = `${r.owner.login}/${r.name}`;
-      const count = await fetchCommitCount(token, r.owner.login, r.name, username);
+      const count = await fetchCommitCount(token, r.owner.login, r.name);
       userCommitsOwnMap.set(key, count);
     }),
   ]);

@@ -53,11 +53,10 @@ export async function fetchAllRepos(token: string, username: string): Promise<Ra
 }
 
 export async function fetchCommitCount(
-  token: string, owner: string, repo: string, author?: string
+  token: string, owner: string, repo: string
 ): Promise<number> {
-  const authorParam = author ? `&author=${encodeURIComponent(author)}` : "";
   const res = await fetch(
-    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1${authorParam}`,
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`,
     { headers: HEADERS(token) }
   );
   if (!res.ok) return 0;
@@ -66,6 +65,20 @@ export async function fetchCommitCount(
   if (match) return parseInt(match[1], 10);
   const body = await res.json() as unknown[];
   return body.length;
+}
+
+export async function fetchUserCommitCount(
+  token: string, owner: string, repo: string, username: string
+): Promise<number> {
+  const searchHeaders = { ...HEADERS(token), Accept: "application/vnd.github+json" };
+  const base = `https://api.github.com/search/commits?per_page=1&q=${encodeURIComponent(`repo:${owner}/${repo}`)}`;
+  const [authorRes, coAuthorRes] = await Promise.all([
+    fetch(`${base}+author:${encodeURIComponent(username)}`,    { headers: searchHeaders }),
+    fetch(`${base}+co-author:${encodeURIComponent(username)}`, { headers: searchHeaders }),
+  ]);
+  const authorCount   = authorRes.ok   ? ((await authorRes.json()   as { total_count?: number }).total_count ?? 0) : 0;
+  const coAuthorCount = coAuthorRes.ok ? ((await coAuthorRes.json() as { total_count?: number }).total_count ?? 0) : 0;
+  return authorCount + coAuthorCount;
 }
 
 export async function fetchYearCommits(
