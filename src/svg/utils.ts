@@ -4,6 +4,7 @@ export interface CardOptions {
   width?: number;
   height?: number;
   responsive?: boolean;
+  languageCount?: number;
 }
 
 export interface ThemeColors {

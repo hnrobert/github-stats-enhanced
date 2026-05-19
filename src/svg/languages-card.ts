@@ -3,7 +3,7 @@ import { getColors, getCardStyle, svgOpen, getLangColor, escapeXml, type Theme, 
 
 export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
-  const langs = stats.stats.languageStats.slice(0, 8);
+  const langs = stats.stats.languageStats.slice(0, opts.languageCount ?? 8);
   const W = opts.width ?? 500;
   const padX = 28;
   const innerW = W - padX * 2;

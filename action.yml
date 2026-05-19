@@ -21,10 +21,6 @@ inputs:
     description: "Card theme: adaptive (auto dark/light), dark, or light"
     required: false
     default: "adaptive"
-  exclude_languages:
-    description: "Comma-separated list of languages to exclude"
-    required: false
-    default: ""
   exclude_repos:
     description: "Comma-separated list of repos to exclude (owner/repo)"
     required: false
@@ -51,6 +47,14 @@ inputs:
     default: ""
   languages_width:
     description: "Width in pixels for languages card (default: 500)"
+    required: false
+    default: ""
+  languages_count:
+    description: "Number of languages to display in the languages card (default: 8)"
+    required: false
+    default: ""
+  exclude_languages:
+    description: "Comma-separated list of languages to exclude"
     required: false
     default: ""
 

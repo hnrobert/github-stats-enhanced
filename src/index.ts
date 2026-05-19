@@ -55,6 +55,7 @@ function log(message: string): void {
     };
     const langOpts: CardOptions = {
       width: getIntInput("languages_width"),
+      languageCount: getIntInput("languages_count"),
       responsive,
     };
 
