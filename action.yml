@@ -2,6 +2,9 @@ name: "GitHub Stats Enhanced"
 description: "Generate GitHub stats SVG cards for profile README"
 author: "hnrobert"
 
+branding:
+  icon: "bar-chart-2"
+  color: "blue"
 inputs:
   github_user_name:
     description: "GitHub username to generate stats for"
@@ -28,5 +31,5 @@ inputs:
     default: ""
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/index.js"
