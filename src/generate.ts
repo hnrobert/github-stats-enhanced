@@ -3,6 +3,8 @@ import * as path from "node:path";
 import { generateStatsCard1, generateStatsCard2 } from "./svg/stats-card.ts";
 import { generateLanguagesCard } from "./svg/languages-card.ts";
 import { generateContributionsCard } from "./svg/contributions-card.ts";
+import { buildReport } from "./report.ts";
+import { buildDemo } from "./demo.ts";
 import { log } from "./action/logger.ts";
 import type { Theme } from "./svg/theme.ts";
 import type { CardOptions } from "./svg/helpers.ts";
@@ -41,4 +43,23 @@ export function generateSvgs(
     log(`- ${filePath}`);
   }
   log(`\n${outputs.length} svg files generated in ./${outputDir}/`);
+}
+
+export function generateReport(stats: GitHubStats, outputDir: string): void {
+  const filePath = path.join(outputDir, "README.md");
+  fs.writeFileSync(filePath, buildReport(stats), "utf-8");
+  log(`- ${filePath}`);
+}
+
+export function generateDemo(stats: GitHubStats, outputDir: string, langOpts: CardOptions): void {
+  const ro: CardOptions = { ...langOpts, responsive: true };
+  const cards = {
+    stats1:  generateStatsCard1(stats, "adaptive", ro),
+    stats2:  generateStatsCard2(stats, "adaptive", ro),
+    contrib: generateContributionsCard(stats, "adaptive", ro),
+    langs:   generateLanguagesCard(stats, "adaptive", ro),
+  };
+  const filePath = path.join(outputDir, "index.html");
+  fs.writeFileSync(filePath, buildDemo(stats.user.login, cards), "utf-8");
+  log(`- ${filePath}`);
 }

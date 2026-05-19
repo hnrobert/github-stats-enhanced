@@ -2,23 +2,24 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fetchGitHubStats } from "./api/index.ts";
 import { writeStatsYaml, readStatsYaml } from "./data.ts";
-import { generateSvgs } from "./generate.ts";
+import { generateSvgs, generateReport, generateDemo } from "./generate.ts";
 import { getInput, getBoolInput, buildCardOpts, log, setFailed } from "./action/index.ts";
 import type { Theme } from "./svg/theme.ts";
 
 (async () => {
   try {
-    const mode      = getInput("mode") || "all";
-    const outputDir = getInput("output_dir") || "dist";
-    const dataFile  = getInput("data_file") || path.join(outputDir, "stats.yml");
-    const theme     = (getInput("theme") || "adaptive") as Theme;
+    const mode           = getInput("mode") || "all";
+    const outputDir      = getInput("output_dir") || "dist";
+    const dataFile       = getInput("data_file") || path.join(outputDir, "stats.yml");
+    const theme          = (getInput("theme") || "adaptive") as Theme;
+    const withReport     = getInput("generate_report").toLowerCase() !== "false";
     const { statsOpts, contribOpts, langOpts } = buildCardOpts(getBoolInput("responsive"));
 
     fs.mkdirSync(outputDir, { recursive: true });
 
     if (mode === "fetch" || mode === "all") {
-      const username        = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
-      const token           = process.env.GITHUB_TOKEN || getInput("github_token");
+      const username         = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
+      const token            = process.env.GITHUB_TOKEN || getInput("github_token");
       const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
       const excludeRepos     = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -34,6 +35,10 @@ import type { Theme } from "./svg/theme.ts";
 
       if (mode === "all") {
         generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
+        if (withReport) {
+          generateReport(stats, outputDir);
+          generateDemo(stats, outputDir, langOpts);
+        }
         log(`\nREADME usage (adaptive theme):`);
         log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats1-adaptive.svg)`);
         log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats2-adaptive.svg)`);
@@ -45,6 +50,10 @@ import type { Theme } from "./svg/theme.ts";
       log(`📄 Loading stats from ${dataFile}`);
       const stats = readStatsYaml(dataFile);
       generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
+      if (withReport) {
+        generateReport(stats, outputDir);
+        generateDemo(stats, outputDir, langOpts);
+      }
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);
     }

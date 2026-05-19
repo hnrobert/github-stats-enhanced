@@ -65,6 +65,10 @@ inputs:
     description: "Comma-separated list of languages to exclude"
     required: false
     default: ""
+  generate_report:
+    description: "Generate README.md (stats report) and index.html (demo page) alongside SVGs"
+    required: false
+    default: "true"
 
 runs:
   using: "node24"
