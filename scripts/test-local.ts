@@ -74,5 +74,5 @@ if (fromCache) {
 const ro = { responsive: true };
 generateSvgs(stats, outDir, "adaptive", ro, ro, ro);
 generateReport(stats, outDir);
-generateDemo(stats, outDir, ro);
+generateDemo(stats);
 console.log(`\nDone — open output/index.html to preview`);

@@ -5,3 +5,8 @@ declare module "@primer/octicons" {
   const octicons: Record<string, Octicon>;
   export default octicons;
 }
+
+declare module "*.html" {
+  const content: string;
+  export default content;
+}

@@ -51,15 +51,9 @@ export function generateReport(stats: GitHubStats, outputDir: string): void {
   log(`- ${filePath}`);
 }
 
-export function generateDemo(stats: GitHubStats, outputDir: string, langOpts: CardOptions): void {
-  const ro: CardOptions = { ...langOpts, responsive: true };
-  const cards = {
-    stats1:  generateStatsCard1(stats, "adaptive", ro),
-    stats2:  generateStatsCard2(stats, "adaptive", ro),
-    contrib: generateContributionsCard(stats, "adaptive", ro),
-    langs:   generateLanguagesCard(stats, "adaptive", ro),
-  };
-  const filePath = path.join(outputDir, "index.html");
-  fs.writeFileSync(filePath, buildDemo(stats.user.login, cards), "utf-8");
+export function generateDemo(stats: GitHubStats, rootDir: string = "."): void {
+  const filePath = path.join(rootDir, "index.html");
+  const displayName = stats.user.name ?? stats.user.login;
+  fs.writeFileSync(filePath, buildDemo(stats.user.login, displayName), "utf-8");
   log(`- ${filePath}`);
 }

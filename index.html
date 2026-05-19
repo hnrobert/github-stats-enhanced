@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Stats — Robert He</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f172a;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f1f5f9;
+        --border: rgba(0, 0, 0, 0.08);
+        --text: #1e293b;
+        --muted: #64748b;
+        --accent: #3b82f6;
+      }
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 2rem 1.5rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 3rem;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .desc {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .tag {
+      display: inline-block;
+      background: rgba(96, 165, 250, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 1px 7px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 2fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .resizable {
+      resize: horizontal;
+      overflow: hidden;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      min-width: 280px;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .resize-hint {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 1rem;
+    }
+
+    .spacer {
+      margin-top: 1.25rem;
+    }
+
+    img {
+      display: block;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>GitHub Stats — Robert He</h1>
+  <p class="subtitle">Drag the right edge to see responsive scaling</p>
+
+  <h2>Cards <span class="tag">adaptive</span></h2>
+  <p class="desc">Auto dark / light theme, scales with container width.</p>
+  <div class="resizable">
+    <p class="resize-hint">↔ drag right edge to resize</p>
+    <div class="stats-grid">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-adaptive.svg"
+        alt="Stats 1">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-adaptive.svg"
+        alt="Stats 2">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-adaptive.svg"
+        alt="Contributions">
+    </div>
+    <div class="spacer">
+      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-adaptive.svg"
+        alt="Languages">
+    </div>
+  </div>
+</body>
+
+</html>

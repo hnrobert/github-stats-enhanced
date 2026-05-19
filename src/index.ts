@@ -37,7 +37,7 @@ import type { Theme } from "./svg/theme.ts";
         generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
           generateReport(stats, outputDir);
-          generateDemo(stats, outputDir, langOpts);
+          generateDemo(stats);
         }
         log(`\nREADME usage (adaptive theme):`);
         log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats1-adaptive.svg)`);
@@ -52,7 +52,7 @@ import type { Theme } from "./svg/theme.ts";
       generateSvgs(stats, outputDir, theme, statsOpts, contribOpts, langOpts);
       if (withReport) {
         generateReport(stats, outputDir);
-        generateDemo(stats, outputDir, langOpts);
+        generateDemo(stats);
       }
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);
