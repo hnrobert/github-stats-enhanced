@@ -3,70 +3,51 @@ export type Theme = "dark" | "light" | "adaptive";
 export interface ThemeColors {
   bg: string;
   border: string;
-  titleColor: string;
-  textColor: string;
-  subTextColor: string;
-  statNumberColor: string;
+  textPrimary: string;
+  textSecondary: string;
+  accentBlue: string;
   progressBg: string;
-  heatmapColor: string;
 }
 
+// Exact values from homepage theme.css
 export const THEMES: Record<"dark" | "light", ThemeColors> = {
   dark: {
-    bg: "#0d1117",
-    border: "#30363d",
-    titleColor: "#58a6ff",
-    textColor: "#e6edf3",
-    subTextColor: "#8b949e",
-    statNumberColor: "#58a6ff",
-    progressBg: "#21262d",
-    heatmapColor: "#58a6ff",
+    bg: "rgba(15,23,42,0.8)",       // --glass-bg dark
+    border: "rgba(255,255,255,0.1)", // --glass-border dark
+    textPrimary: "#f8fafc",          // --text-primary dark
+    textSecondary: "#cbd5e1",        // --text-secondary dark
+    accentBlue: "#60a5fa",           // --accent-blue dark
+    progressBg: "#334155",           // --bg-tertiary dark
   },
   light: {
-    bg: "#ffffff",
-    border: "#d0d7de",
-    titleColor: "#0969da",
-    textColor: "#1f2328",
-    subTextColor: "#57606a",
-    statNumberColor: "#0969da",
-    progressBg: "#eaeef2",
-    heatmapColor: "#0969da",
+    bg: "rgba(255,255,255,0.8)",     // --glass-bg light
+    border: "rgba(255,255,255,0.2)", // --glass-border light
+    textPrimary: "#1f2937",          // --text-primary light
+    textSecondary: "#6b7280",        // --text-secondary light
+    accentBlue: "#3b82f6",           // --accent-blue light
+    progressBg: "#fae8ff",           // --bg-tertiary light
   },
 };
 
-// CSS variable references used when theme === "adaptive"
 export const ADAPTIVE_COLORS: ThemeColors = {
   bg: "var(--s-bg)",
   border: "var(--s-bd)",
-  titleColor: "var(--s-ti)",
-  textColor: "var(--s-tx)",
-  subTextColor: "var(--s-st)",
-  statNumberColor: "var(--s-nu)",
+  textPrimary: "var(--s-tp)",
+  textSecondary: "var(--s-ts)",
+  accentBlue: "var(--s-ac)",
   progressBg: "var(--s-pb)",
-  heatmapColor: "var(--s-hm)",
 };
 
-/** Returns the <style> block for adaptive SVGs; empty string for fixed themes. */
 export function getAdaptiveStyle(theme: Theme): string {
   if (theme !== "adaptive") return "";
   const l = THEMES.light;
   const d = THEMES.dark;
-  return `
-  <style>
-    :root {
-      --s-bg:${l.bg};--s-bd:${l.border};--s-ti:${l.titleColor};
-      --s-tx:${l.textColor};--s-st:${l.subTextColor};
-      --s-nu:${l.statNumberColor};--s-pb:${l.progressBg};--s-hm:${l.heatmapColor};
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --s-bg:${d.bg};--s-bd:${d.border};--s-ti:${d.titleColor};
-        --s-tx:${d.textColor};--s-st:${d.subTextColor};
-        --s-nu:${d.statNumberColor};--s-pb:${d.progressBg};--s-hm:${d.heatmapColor};
-      }
-    }
-    .hdr{animation:fadeIn .8s ease-in-out forwards}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+  return `<style>
+    :root{--s-bg:${l.bg};--s-bd:${l.border};--s-tp:${l.textPrimary};
+      --s-ts:${l.textSecondary};--s-ac:${l.accentBlue};--s-pb:${l.progressBg};}
+    @media(prefers-color-scheme:dark){:root{
+      --s-bg:${d.bg};--s-bd:${d.border};--s-tp:${d.textPrimary};
+      --s-ts:${d.textSecondary};--s-ac:${d.accentBlue};--s-pb:${d.progressBg};}}
   </style>`;
 }
 
@@ -91,8 +72,13 @@ export const LANGUAGE_COLORS: Record<string, string> = {
   HTML: "#e34c26",
   CSS: "#1572B6",
   Vue: "#4FC08D",
+  React: "#61DAFB",
   Shell: "#89e051",
   Dockerfile: "#384d54",
+  YAML: "#cb171e",
+  JSON: "#292929",
+  Markdown: "#083fa1",
+  SQL: "#e38c00",
 };
 
 export function getLangColor(lang: string): string {
@@ -112,3 +98,5 @@ export function formatNumber(n: number): string {
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return n.toLocaleString();
 }
+
+export const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;

@@ -140,3 +140,6 @@ out
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Local test output
+output/

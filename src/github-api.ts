@@ -4,6 +4,14 @@ export interface LanguageStat {
   percentage: number;
 }
 
+export interface RepoInfo {
+  name: string;
+  owner: string;
+  stars: number;
+  forks: number;
+  languages: Array<{ name: string; size: number; percentage: number }>;
+}
+
 export interface YearlyContributions {
   year: number;
   total: number;
@@ -34,9 +42,10 @@ export interface GitHubStats {
     languageStats: LanguageStat[];
     yearlyContributions: YearlyContributions;
   };
+  repos: RepoInfo[];
 }
 
-const GRAPHQL_QUERY = `
+const CONTRIBUTIONS_QUERY = `
   query($username: String!, $from: DateTime!) {
     user(login: $username) {
       createdAt
@@ -66,8 +75,17 @@ const GRAPHQL_QUERY = `
           contributions(first: 1) { totalCount }
         }
       }
-      ownRepositories: repositories(first: 100, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false) {
+    }
+  }
+`;
+
+const REPOS_PAGE_QUERY = `
+  query($username: String!, $after: String) {
+    user(login: $username) {
+      repositories(first: 100, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false, after: $after) {
+        pageInfo { hasNextPage endCursor }
         nodes {
+          name
           stargazerCount
           forkCount
           owner { login }
@@ -94,6 +112,18 @@ async function graphql(token: string, query: string, variables: Record<string, u
   const data = await res.json() as { data?: unknown; errors?: unknown[] };
   if (data.errors) throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
   return data.data as Record<string, unknown>;
+}
+
+async function fetchAllRepos(token: string, username: string): Promise<any[]> {
+  const repos: any[] = [];
+  let cursor: string | null = null;
+  do {
+    const page = await graphql(token, REPOS_PAGE_QUERY, { username, after: cursor });
+    const repoPage = (page as any).user.repositories;
+    repos.push(...repoPage.nodes);
+    cursor = repoPage.pageInfo.hasNextPage ? repoPage.pageInfo.endCursor : null;
+  } while (cursor);
+  return repos;
 }
 
 async function fetchYearCommits(
@@ -147,13 +177,13 @@ export async function fetchGitHubStats(
 
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  const data = await graphql(token, GRAPHQL_QUERY, {
-    username,
-    from: oneYearAgo.toISOString(),
-  });
+
+  const [data, ownRepos] = await Promise.all([
+    graphql(token, CONTRIBUTIONS_QUERY, { username, from: oneYearAgo.toISOString() }),
+    fetchAllRepos(token, username),
+  ]);
 
   const gqlUser = (data as any).user;
-  const ownRepos: any[] = gqlUser.ownRepositories.nodes;
   const lastYear = gqlUser.lastYearContributions;
 
   // Cumulative commits across all years
@@ -168,9 +198,13 @@ export async function fetchGitHubStats(
   const totalStars = ownRepos.reduce((s: number, r: any) => s + (r.stargazerCount ?? 0), 0);
   const totalForks = ownRepos.reduce((s: number, r: any) => s + (r.forkCount ?? 0), 0);
 
-  // Language stats
+  // Language stats — matches homepage calculation
   const langMap = new Map<string, number>();
+
+  // Own repos: full attribution (100%)
   for (const repo of ownRepos) {
+    const repoName = `${repo.owner?.login}/${repo.name}`;
+    if (excludeRepos.has(repoName)) continue;
     for (const edge of repo.languages?.edges ?? []) {
       const lang: string = edge.node.name;
       if (!excludeLanguages.has(lang)) {
@@ -178,13 +212,15 @@ export async function fetchGitHubStats(
       }
     }
   }
-  for (const contrib of lastYear.commitContributionsByRepository ?? []) {
-    const repoName = `${contrib.repository?.owner?.login}/${contrib.repository?.name}`;
+
+  // Contributed repos: weighted by commit ratio (same as homepage)
+  for (const cr of lastYear.commitContributionsByRepository ?? []) {
+    const repoName = `${cr.repository?.owner?.login}/${cr.repository?.name}`;
     if (excludeRepos.has(repoName)) continue;
-    const commits: number = contrib.contributions?.totalCount ?? 0;
+    const commits: number = cr.contributions?.totalCount ?? 0;
     if (commits === 0) continue;
     const weight = Math.min(commits / 100, 0.8);
-    for (const edge of contrib.repository?.languages?.edges ?? []) {
+    for (const edge of cr.repository?.languages?.edges ?? []) {
       const lang: string = edge.node.name;
       if (!excludeLanguages.has(lang)) {
         langMap.set(lang, (langMap.get(lang) ?? 0) + edge.size * weight);
@@ -201,6 +237,27 @@ export async function fetchGitHubStats(
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
+
+  const repos: RepoInfo[] = ownRepos
+    .filter((r: any) => !excludeRepos.has(`${r.owner?.login}/${r.name}`))
+    .map((r: any) => {
+      const edges: any[] = r.languages?.edges ?? [];
+      const repoTotal = edges.reduce((s: number, e: any) => s + e.size, 0);
+      return {
+        name: r.name ?? "",
+        owner: r.owner?.login ?? username,
+        stars: r.stargazerCount ?? 0,
+        forks: r.forkCount ?? 0,
+        languages: edges
+          .filter((e: any) => !excludeLanguages.has(e.node.name))
+          .map((e: any) => ({
+            name: e.node.name,
+            size: e.size,
+            percentage: repoTotal > 0 ? Math.round((e.size / repoTotal) * 1000) / 10 : 0,
+          })),
+      };
+    })
+    .sort((a: RepoInfo, b: RepoInfo) => b.stars - a.stars);
 
   return {
     user: {
@@ -230,5 +287,6 @@ export async function fetchGitHubStats(
         weeks: lastYear.contributionCalendar?.weeks ?? [],
       },
     },
+    repos,
   };
 }

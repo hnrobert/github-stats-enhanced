@@ -1,65 +1,66 @@
 import type { GitHubStats } from "../github-api.ts";
-import { getColors, getAdaptiveStyle, formatNumber, type Theme } from "./utils.ts";
+import { getColors, getAdaptiveStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
 
+// Matches homepage ContributionsCard (stat-box stat-box-wide)
+// Left half: Total Commits (stat-item centered)
+// Right half: "Contributions Last Year" title + 2x2 grid (commits/prs/issues/reviews)
 export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive"): string {
   const c = getColors(theme);
   const { yearlyContributions: yc, totalCommits } = stats.stats;
 
-  const weeks = yc.weeks.slice(-26);
-  const maxCount = Math.max(
-    1,
-    ...weeks.flatMap((w) => w.contributionDays.map((d) => d.contributionCount))
-  );
+  const W = 460; const H = 180;
+  const divX = W / 2;
+  const pad = 24;
 
-  const cellSize = 10;
-  const cellGap = 2;
-  const heatmapX = 25;
-  const heatmapY = 110;
+  // Left: Total Commits centered
+  const leftCX = divX / 2;
+  const leftSection = `
+    <text x="${leftCX}" y="${H / 2 - 12}" fill="${c.accentBlue}" font-size="29" font-weight="700"
+      text-anchor="middle" font-family="${FONT}">${formatNumber(totalCommits)}</text>
+    <text x="${leftCX}" y="${H / 2 + 12}" fill="${c.textSecondary}" font-size="13" font-weight="500"
+      text-anchor="middle" font-family="${FONT}">Total Commits</text>`;
 
-  // Use opacity for intensity so the base color (CSS var or fixed) adapts automatically
-  const heatmapCells = weeks.map((week, wi) => {
-    return week.contributionDays.map((day, di) => {
-      const x = heatmapX + wi * (cellSize + cellGap);
-      const y = heatmapY + di * (cellSize + cellGap);
-      const intensity = day.contributionCount / maxCount;
-      const opacity = intensity === 0 ? 0.1 : (0.2 + intensity * 0.8).toFixed(2);
-      return `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2"
-        fill="${c.heatmapColor}" opacity="${opacity}"><title>${day.date}: ${day.contributionCount}</title></rect>`;
-    }).join("");
-  }).join("");
+  // Right: title + 2x2 grid
+  const rightX = divX + pad;
+  const rightW = W - divX - pad;
+  const titleY = 38;
+  const gridStartY = 62;
+  const cellW = rightW / 2;
+  const cellH = (H - gridStartY - pad) / 2;
 
-  const contribItems = [
-    { label: "Commits", value: formatNumber(yc.commits) },
-    { label: "Pull Requests", value: formatNumber(yc.pullRequests) },
-    { label: "Issues", value: formatNumber(yc.issues) },
-    { label: "Reviews", value: formatNumber(yc.reviews) },
+  const breakdown = [
+    { label: "Commits",  value: formatNumber(yc.commits) },
+    { label: "PRs",      value: formatNumber(yc.pullRequests) },
+    { label: "Issues",   value: formatNumber(yc.issues) },
+    { label: "Reviews",  value: formatNumber(yc.reviews) },
   ];
 
-  const itemW = 110;
-  const contribRow = contribItems.map((item, i) => {
-    const x = 25 + i * itemW;
+  const gridCells = breakdown.map((item, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const cx = rightX + col * cellW + cellW / 2;
+    const cy = gridStartY + row * cellH + cellH / 2;
     return `
-    <g transform="translate(${x}, 65)">
-      <text x="0" y="0" fill="${c.statNumberColor}" font-size="18" font-weight="700"
-        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">${item.value}</text>
-      <text x="0" y="18" fill="${c.subTextColor}" font-size="11"
-        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">${item.label}</text>
-    </g>`;
+    <text x="${cx}" y="${cy - 6}" fill="${c.accentBlue}" font-size="19" font-weight="600"
+      text-anchor="middle" font-family="${FONT}">${item.value}</text>
+    <text x="${cx}" y="${cy + 12}" fill="${c.textSecondary}" font-size="11"
+      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
   }).join("");
 
-  const height = heatmapY + 7 * (cellSize + cellGap) + 20;
+  const rightSection = `
+    <text x="${rightX + rightW / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="14" font-weight="600"
+      text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
+    ${gridCells}`;
 
-  return `<svg width="495" height="${height}" viewBox="0 0 495 ${height}" xmlns="http://www.w3.org/2000/svg">
+  // Divider
+  const divider = `<line x1="${divX}" y1="${pad}" x2="${divX}" y2="${H - pad}"
+    stroke="${c.border}" stroke-width="1"/>`;
+
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   ${getAdaptiveStyle(theme)}
-  <rect width="495" height="${height}" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  <text x="25" y="35" fill="${c.titleColor}" font-size="14" font-weight="600"
-    font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">Contributions (Last Year)</text>
-  <text x="470" y="35" fill="${c.subTextColor}" font-size="12" text-anchor="end"
-    font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">Total: ${formatNumber(totalCommits)} commits</text>
-  <line x1="25" y1="45" x2="470" y2="45" stroke="${c.border}" stroke-width="1"/>
-  ${contribRow}
-  <text x="25" y="105" fill="${c.subTextColor}" font-size="11"
-    font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">Activity — last 26 weeks</text>
-  ${heatmapCells}
+  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${leftSection}
+  ${divider}
+  ${rightSection}
 </svg>`;
 }

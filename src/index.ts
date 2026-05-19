@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { fetchGitHubStats } from "./github-api.ts";
-import { generateStatsCard } from "./svg/stats-card.ts";
+import { generateStatsCard, generateStatsCard1, generateStatsCard2 } from "./svg/stats-card.ts";
 import { generateLanguagesCard } from "./svg/languages-card.ts";
 import { generateContributionsCard } from "./svg/contributions-card.ts";
 import type { Theme } from "./svg/utils.ts";
@@ -40,20 +40,27 @@ function log(message: string): void {
 
     fs.mkdirSync(outputDir, { recursive: true });
 
-    // Always generate all three variants; "stats.svg" uses the configured theme
     const outputs: Array<{ name: string; content: string }> = [
-      { name: "stats.svg",              content: generateStatsCard(stats, theme) },
-      { name: "stats-adaptive.svg",     content: generateStatsCard(stats, "adaptive") },
-      { name: "stats-dark.svg",         content: generateStatsCard(stats, "dark") },
-      { name: "stats-light.svg",        content: generateStatsCard(stats, "light") },
-      { name: "languages.svg",          content: generateLanguagesCard(stats, theme) },
-      { name: "languages-adaptive.svg", content: generateLanguagesCard(stats, "adaptive") },
-      { name: "languages-dark.svg",     content: generateLanguagesCard(stats, "dark") },
-      { name: "languages-light.svg",    content: generateLanguagesCard(stats, "light") },
+      // Card 1: Followers + Total Stars
+      { name: "stats1.svg",              content: generateStatsCard1(stats, theme) },
+      { name: "stats1-adaptive.svg",     content: generateStatsCard1(stats, "adaptive") },
+      { name: "stats1-dark.svg",         content: generateStatsCard1(stats, "dark") },
+      { name: "stats1-light.svg",        content: generateStatsCard1(stats, "light") },
+      // Card 2: Public Repos + Contributed Repos
+      { name: "stats2.svg",              content: generateStatsCard2(stats, theme) },
+      { name: "stats2-adaptive.svg",     content: generateStatsCard2(stats, "adaptive") },
+      { name: "stats2-dark.svg",         content: generateStatsCard2(stats, "dark") },
+      { name: "stats2-light.svg",        content: generateStatsCard2(stats, "light") },
+      // Card 3: Total Commits + contributions breakdown
       { name: "contributions.svg",          content: generateContributionsCard(stats, theme) },
       { name: "contributions-adaptive.svg", content: generateContributionsCard(stats, "adaptive") },
       { name: "contributions-dark.svg",     content: generateContributionsCard(stats, "dark") },
       { name: "contributions-light.svg",    content: generateContributionsCard(stats, "light") },
+      // Languages
+      { name: "languages.svg",          content: generateLanguagesCard(stats, theme) },
+      { name: "languages-adaptive.svg", content: generateLanguagesCard(stats, "adaptive") },
+      { name: "languages-dark.svg",     content: generateLanguagesCard(stats, "dark") },
+      { name: "languages-light.svg",    content: generateLanguagesCard(stats, "light") },
     ];
 
     for (const { name, content } of outputs) {
@@ -63,10 +70,11 @@ function log(message: string): void {
     }
 
     log(`\n🎉 Done! ${outputs.length} SVG files in ./${outputDir}/`);
-    log(`\nRecommended README usage (auto dark/light):`);
-    log(`  ![Stats](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats-adaptive.svg)`);
-    log(`  ![Languages](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/languages-adaptive.svg)`);
+    log(`\nREADME usage (adaptive theme, auto dark/light):`);
+    log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats1-adaptive.svg)`);
+    log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats2-adaptive.svg)`);
     log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/contributions-adaptive.svg)`);
+    log(`  ![Languages](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/languages-adaptive.svg)`);
   } catch (e: any) {
     setFailed(`Action failed: ${e.message}`);
   }
