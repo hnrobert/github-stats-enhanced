@@ -45,9 +45,9 @@ export function getCardStyle(theme: Theme): string {
   const l = THEMES.light;
   const d = THEMES.dark;
   const themeBlock = theme === "adaptive" ? `
-    :root{--s-bg:${l.bg};--s-bd:${l.border};--s-tp:${l.textPrimary};
+    svg{--s-bg:${l.bg};--s-bd:${l.border};--s-tp:${l.textPrimary};
       --s-ts:${l.textSecondary};--s-ac:${l.accentBlue};--s-pb:${l.progressBg};}
-    @media(prefers-color-scheme:dark){:root{
+    @media(prefers-color-scheme:dark){svg{
       --s-bg:${d.bg};--s-bd:${d.border};--s-tp:${d.textPrimary};
       --s-ts:${d.textSecondary};--s-ac:${d.accentBlue};--s-pb:${d.progressBg};}}` : "";
   const ease = "cubic-bezier(.33,1,.68,1)";
