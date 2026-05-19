@@ -22,7 +22,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
 
   const leftSection = `
     <g class="i0">
-    <text x="${leftCX}" y="${numY}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
+    <text x="${leftCX}" y="${numY}" fill="${c.textPrimary}" font-size="${numFontSize}" font-weight="700"
       text-anchor="middle" font-family="${FONT}">${formatNumber(totalCommits)}</text>
     <text x="${leftCX}" y="${labelY}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">Total Commits</text>
@@ -65,7 +65,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
     const lY = nY + 6 + gridLabelCapH;
     return `
     <g class="i${i + 1}">
-    <text x="${cx}" y="${nY}" fill="${c.accentBlue}" font-size="${gridNumFontSize}" font-weight="600"
+    <text x="${cx}" y="${nY}" fill="${c.textPrimary}" font-size="${gridNumFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">${item.value}</text>
     <text x="${cx}" y="${lY}" fill="${c.textSecondary}" font-size="${gridLabelFontSize}"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>

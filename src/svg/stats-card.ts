@@ -52,7 +52,7 @@ function statBox(
     return `
     <g class="i${i}">
     ${octiconAt(item.icon, c.textSecondary, iconX, iconTop, iconSize)}
-    <text x="${numX}" y="${numBaseline}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
+    <text x="${numX}" y="${numBaseline}" fill="${c.textPrimary}" font-size="${numFontSize}" font-weight="700"
       text-anchor="start" font-family="${FONT}">${item.number}</text>
     <text x="${W / 2}" y="${labelBaseline}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
