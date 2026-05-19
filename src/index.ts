@@ -64,9 +64,9 @@ function log(message: string): void {
 
     log(`\n🎉 Done! ${outputs.length} SVG files in ./${outputDir}/`);
     log(`\nRecommended README usage (auto dark/light):`);
-    log(`  ![Stats](https://raw.githubusercontent.com/${username}/${username}/output/stats-adaptive.svg)`);
-    log(`  ![Languages](https://raw.githubusercontent.com/${username}/${username}/output/languages-adaptive.svg)`);
-    log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${username}/output/contributions-adaptive.svg)`);
+    log(`  ![Stats](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats-adaptive.svg)`);
+    log(`  ![Languages](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/languages-adaptive.svg)`);
+    log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/contributions-adaptive.svg)`);
   } catch (e: any) {
     setFailed(`Action failed: ${e.message}`);
   }

@@ -78,10 +78,10 @@ jobs:
           # Optional: comma-separated owner/repo pairs to exclude from stats
           # exclude_repos: "your-username/some-private-repo"
 
-      - name: Deploy to output branch
+      - name: Deploy to github-stats-enhanced branch
         uses: crazy-max/ghaction-github-pages@main
         with:
-          target_branch: output
+          target_branch: github-stats-enhanced
           build_dir: dist
           commit_message: "chore: update GitHub stats [skip ci]"
         env:
@@ -93,23 +93,23 @@ jobs:
 **Recommended — adaptive (works in all themes automatically):**
 
 ```markdown
-![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/output/stats-adaptive.svg)
-![Top Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/output/languages-adaptive.svg)
-![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/output/contributions-adaptive.svg)
+![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-adaptive.svg)
+![Top Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/languages-adaptive.svg)
+![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/contributions-adaptive.svg)
 ```
 
 **Fixed dark/light variants (if you prefer explicit control):**
 
 ```markdown
-![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/output/stats-dark.svg)
+![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-dark.svg)
 ```
 
 ```html
 <!-- Manual dark/light switch with <picture> -->
 <picture>
   <source media="(prefers-color-scheme: dark)"
-    srcset="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/output/stats-dark.svg">
-  <img src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/output/stats-light.svg">
+    srcset="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-dark.svg">
+  <img src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-light.svg">
 </picture>
 ```
 
