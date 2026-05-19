@@ -61,6 +61,7 @@ jobs:
           # Responsive SVGs (width="100%", scales to container)
           # Set to "false" for fixed pixel dimensions
           responsive: "true"
+          generate_report: "true"   # also writes README.md + index.html
 
           # --- Card dimensions (pixels) ---
           # stats_width: "220"
@@ -72,11 +73,14 @@ jobs:
           # Number of languages to display (default: 8)
           # languages_count: "8"
 
-          # Comma-separated languages to exclude
+          # Comma-separated languages to exclude from language stats
           # exclude_languages: "HTML,CSS,SCSS"
 
-          # Comma-separated owner/repo pairs to exclude
+          # Comma-separated owner/repo pairs to exclude from language stats
           # exclude_repos: "your-username/some-private-repo"
+
+          # Comma-separated owner/repo pairs to exclude from contribution stats only
+          # contrib_exclude_repos: "your-username/some-private-repo"
 
       - name: Deploy to github-stats-enhanced branch
         uses: crazy-max/ghaction-github-pages@v5
@@ -128,6 +132,9 @@ jobs:
 #           output_dir: dist
 #           theme: adaptive
 #           responsive: "true"
+#           # exclude_languages: "HTML,CSS"
+#           # exclude_repos: "your-username/some-repo"
+#           # contrib_exclude_repos: "your-username/some-repo"
 #       - uses: crazy-max/ghaction-github-pages@v5
 #         with:
 #           target_branch: github-stats-enhanced

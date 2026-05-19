@@ -29,10 +29,12 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
       text-anchor="middle" font-family="${FONT}">Total Commits</text>
     </g>`;
 
-  // Right: title + 2x2 grid — all centered within right half
-  const rightCX = halfW + halfW / 2;
-  const titleFontSize = 14;
-  const titleCapH = titleFontSize * 0.72;
+  // Right: title + 2x2 grid
+  // Grid uses full right half so col centers are symmetric
+  const rightStart    = halfW;
+  const rightW        = W - rightStart;
+  const titleFontSize = 13;
+  const titleCapH     = titleFontSize * 0.72;
 
   // Grid layout: title at top, then 2 rows × 2 cols
   const gridNumFontSize = 19;
@@ -56,11 +58,14 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
     { label: "Reviews", value: formatNumber(yc.reviews) },
   ];
 
-  const cellW = halfW / 2;
+  const cellW = rightW / 2;
+  const col0CX = rightStart + cellW / 2;
+  const col1CX = rightStart + cellW + cellW / 2;
+  const gridCX = (col0CX + col1CX) / 2;
   const gridCells = breakdown.map((item, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    const cx = halfW + col * cellW + cellW / 2;
+    const cx = col === 0 ? col0CX : col1CX;
     const rowTop = gridStartY + row * (gridItemH + rowGap);
     const nY = rowTop + gridNumCapH;
     const lY = nY + 6 + gridLabelCapH;
@@ -75,14 +80,20 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
 
   const rightSection = `
     <g class="title">
-    <text x="${rightCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
+    <text x="${gridCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
     </g>
     ${gridCells}`;
 
+  const divH  = H * 2 / 3;
+  const divY1 = (H - divH) / 2;
+  const divider = `<line x1="${halfW}" y1="${divY1}" x2="${halfW}" y2="${divY1 + divH}"
+    stroke="${c.border}" stroke-width="1"/>`;
+
   return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${divider}
   ${leftSection}
   ${rightSection}
 </svg>`;
