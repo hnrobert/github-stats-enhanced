@@ -27,21 +27,19 @@ function statBox(
   const labelFontSize = 13;
   const numLabelGap = 10;
 
-  // Group height: number (cap ~numFontSize*0.72) + gap + label cap
-  const numCapH = numFontSize * 0.72;
-  const labelCapH = labelFontSize * 0.72;
-  const groupH = numCapH + numLabelGap + labelCapH;
+  // Use em-square heights so dominant-baseline="central" aligns correctly
+  const groupH = numFontSize + numLabelGap + labelFontSize;
 
   return items.map((item, i) => {
     const cy = (i + 0.5) * (H / items.length);
-
-    // Vertical: center the group at cy
     const groupTop = cy - groupH / 2;
-    const numBaseline = groupTop + numCapH;
-    const labelBaseline = numBaseline + numLabelGap + labelCapH;
 
-    // Icon vertically centered with number cap
-    const iconTop = groupTop + (numCapH - iconSize) / 2;
+    // Center y for each row — matches dominant-baseline="central"
+    const numCY = groupTop + numFontSize / 2;
+    const labelCY = groupTop + numFontSize + numLabelGap + labelFontSize / 2;
+
+    // Icon center aligned to numCY
+    const iconTop = numCY - iconSize / 2;
 
     // Horizontal: center icon+gap+number as a unit
     const numW = estimateWidth(item.number, numFontSize);
@@ -52,9 +50,9 @@ function statBox(
     return `
     <g class="i${i}">
     ${octiconAt(item.icon, c.textSecondary, iconX, iconTop, iconSize)}
-    <text x="${numX}" y="${numBaseline}" fill="${c.textPrimary}" font-size="${numFontSize}" font-weight="700"
+    <text x="${numX}" y="${numCY}" dominant-baseline="central" fill="${c.textPrimary}" font-size="${numFontSize}" font-weight="700"
       text-anchor="start" font-family="${FONT}">${item.number}</text>
-    <text x="${W / 2}" y="${labelBaseline}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
+    <text x="${W / 2}" y="${labelCY}" dominant-baseline="central" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
     </g>`;
   }).join("");
