@@ -43,7 +43,7 @@ name: GitHub Stats
 
 on:
   schedule:
-    - cron: "30 0 * * *"   # daily at 00:30 UTC
+    - cron: "30 0 * * *" # daily at 00:30 UTC
   push:
     paths:
       - ".github/workflows/github-stats.yml"
@@ -70,13 +70,46 @@ jobs:
         uses: hnrobert/github-stats-enhanced@main
         with:
           github_user_name: ${{ inputs.username || github.repository_owner }}
+          # Token priority: SELF_GITHUB_TOKEN > GITHUB_TOKEN (auto-provided)
+          # self_github_token: ${{ secrets.SELF_GITHUB_TOKEN }}  # uncomment to use PAT
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Pipeline mode: "all" | "fetch" | "generate"
+          mode: "all"
+
+          # Output directory for generated SVG files
           output_dir: dist
+
+          # Card theme: adaptive (follows system dark/light), dark, light
           theme: ${{ inputs.theme || 'adaptive' }}
-          # Optional: comma-separated languages to exclude from the languages card
+
+          # Responsive SVGs (width="100%", scales to container)
+          # Set to "false" for fixed pixel dimensions
+          responsive: "true"
+          generate_report: "true"   # also writes README.md + index.html
+
+          # --- Card dimensions (pixels) ---
+          # stats_width: "220"
+          # stats_height: "200"
+          # contributions_width: "460"
+          # contributions_height: "180"
+          # languages_width: "500"
+
+          # Number of languages to display (default: 8)
+          # languages_count: "8"
+
+          # Comma-separated languages to exclude from language stats
           # exclude_languages: "HTML,CSS,SCSS"
-          # Optional: comma-separated owner/repo pairs to exclude from stats
+
+          # Comma-separated owner/repo pairs to exclude from language stats
           # exclude_repos: "your-username/some-private-repo"
+
+          # Comma-separated owner/repo pairs to exclude from contribution stats only
+          # contrib_exclude_repos: "your-username/some-private-repo"
+
+          # Weight contributed (non-own) repo languages by your commit ratio
+          # Set to "false" to count all languages at full weight
+          # weight_contributed_repos: "true"
 
       - name: Deploy to github-stats-enhanced branch
         uses: crazy-max/ghaction-github-pages@v5
@@ -113,22 +146,58 @@ jobs:
 </picture>
 ```
 
+## Token setup
+
+The action looks for a token in this priority order:
+
+1. `self_github_token` input (or `SELF_GITHUB_TOKEN` env var) — your personal access token
+2. `github_token` input (or `GITHUB_TOKEN` env var) — the auto-provided Actions token
+
+The default `GITHUB_TOKEN` works for public profile stats. Use a PAT (`self_github_token`) if you want:
+
+- Private repository language data
+- Organization contribution stats
+- More accurate data across repos you don't own
+
+To create a PAT: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens.  
+Required scopes: **Contents** (read) on your repos + **Metadata** (read).
+
+Add it as a secret named `SELF_GITHUB_TOKEN` in your profile repo, then:
+
+```yaml
+with:
+  self_github_token: ${{ secrets.SELF_GITHUB_TOKEN }}
+```
+
 ## Inputs
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `github_user_name` | yes | — | GitHub username |
-| `github_token` | yes | — | Use `secrets.GITHUB_TOKEN` |
-| `output_dir` | no | `dist` | Output directory |
+| `github_user_name` | yes | — | GitHub username to generate stats for |
+| `self_github_token` | no | — | Personal access token. Takes priority over `GITHUB_TOKEN`. Use for private repos or org stats. |
+| `github_token` | no | — | Fallback token. The auto-provided `GITHUB_TOKEN` is used if neither token is set. |
+| `mode` | no | `all` | `all` (fetch + generate), `fetch` (API → stats.yml), `generate` (stats.yml → SVGs) |
+| `output_dir` | no | `dist` | Output directory for generated SVGs |
 | `theme` | no | `adaptive` | `adaptive`, `dark`, or `light` |
-| `exclude_languages` | no | — | Comma-separated languages to exclude |
-| `exclude_repos` | no | — | Comma-separated `owner/repo` to exclude |
+| `responsive` | no | `true` | `true` for `width="100%"`, `false` for fixed pixel dimensions |
+| `exclude_languages` | no | — | Comma-separated languages to exclude from the languages card |
+| `exclude_repos` | no | — | Comma-separated `owner/repo` to exclude from language stats |
+| `contrib_exclude_repos` | no | — | Comma-separated `owner/repo` to exclude from contribution stats only |
+| `weight_contributed_repos` | no | `true` | Set to `false` to count contributed repo languages at full weight instead of by commit ratio |
+| `languages_count` | no | `8` | Number of languages to display |
+| `stats_width` | no | `220` | Stats card width (px) |
+| `stats_height` | no | `200` | Stats card height (px) |
+| `contributions_width` | no | `460` | Contributions card width (px) |
+| `contributions_height` | no | `180` | Contributions card height (px) |
+| `languages_width` | no | `500` | Languages card width (px) |
+| `generate_report` | no | `true` | Also write `README.md` (stats report) and `index.html` (demo page) |
 
 ## Local development
 
 ```bash
 bun install
-GITHUB_TOKEN=your_token GITHUB_USER_NAME=your_username bun src/index.ts
+# Use SELF_GITHUB_TOKEN for a PAT, or GITHUB_TOKEN for the default token
+SELF_GITHUB_TOKEN=your_pat GITHUB_USER_NAME=your_username bun src/index.ts
 ```
 
 ## Build for action deployment

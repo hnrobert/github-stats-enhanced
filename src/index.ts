@@ -36,7 +36,11 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
 
     if (mode === "fetch" || mode === "all") {
       const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
-      const token    = process.env.GITHUB_TOKEN || getInput("github_token");
+      const token =
+        process.env.SELF_GITHUB_TOKEN ||
+        getInput("self_github_token")  ||
+        process.env.GITHUB_TOKEN       ||
+        getInput("github_token");
       if (!username) throw new Error("github_user_name is required");
       if (!token)    throw new Error("GITHUB_TOKEN is required");
 

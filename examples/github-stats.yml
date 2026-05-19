@@ -1,10 +1,14 @@
 # Copy this file to .github/workflows/github-stats.yml in your profile repo
 # (the repo named <your-username>/<your-username>)
 #
-# Required: add GITHUB_TOKEN to your repo secrets, or rely on the auto-provided one.
-# The generated SVGs are pushed to the `github-stats-enhanced` branch and can be referenced
-# in your profile README as:
+# Token setup (choose one):
+#   Option A — default: the auto-provided GITHUB_TOKEN is used automatically.
+#   Option B — personal token: create a PAT with `repo` + `read:user` scopes,
+#              add it as a secret named SELF_GITHUB_TOKEN in your profile repo,
+#              then set `self_github_token: ${{ secrets.SELF_GITHUB_TOKEN }}`.
+#              Use this if you want private repo data or org contribution stats.
 #
+# The generated SVGs are pushed to the `github-stats-enhanced` branch:
 #   ![Stats1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats1-adaptive.svg)
 #   ![Stats2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats2-adaptive.svg)
 #   ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/contributions-adaptive.svg)
@@ -47,6 +51,8 @@ jobs:
         uses: hnrobert/github-stats-enhanced@main
         with:
           github_user_name: ${{ inputs.username || github.repository_owner }}
+          # Token priority: SELF_GITHUB_TOKEN > GITHUB_TOKEN (auto-provided)
+          # self_github_token: ${{ secrets.SELF_GITHUB_TOKEN }}  # uncomment to use PAT
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
           # Pipeline mode: "all" | "fetch" | "generate"
@@ -81,6 +87,10 @@ jobs:
 
           # Comma-separated owner/repo pairs to exclude from contribution stats only
           # contrib_exclude_repos: "your-username/some-private-repo"
+
+          # Weight contributed (non-own) repo languages by your commit ratio
+          # Set to "false" to count all languages at full weight
+          # weight_contributed_repos: "true"
 
       - name: Deploy to github-stats-enhanced branch
         uses: crazy-max/ghaction-github-pages@v5

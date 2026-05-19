@@ -9,6 +9,10 @@ inputs:
   github_user_name:
     description: "GitHub username to generate stats for"
     required: true
+  self_github_token:
+    description: "Personal GitHub token (overrides GITHUB_TOKEN). Use this if the default token lacks permissions for private repos or org data."
+    required: false
+    default: ""
   github_token:
     description: "GitHub token for API access"
     required: false
