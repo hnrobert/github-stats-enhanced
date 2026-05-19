@@ -10,9 +10,9 @@ on:
         description: "GitHub username (defaults to repo owner)"
         required: false
       theme:
-        description: "Card theme (dark or light)"
+        description: "Card theme (adaptive, dark, or light)"
         required: false
-        default: "dark"
+        default: "adaptive"
 
 jobs:
   generate:
@@ -39,7 +39,7 @@ jobs:
           github_user_name: ${{ inputs.username || github.repository_owner }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           output_dir: dist
-          theme: ${{ inputs.theme || 'dark' }}
+          theme: ${{ inputs.theme || 'adaptive' }}
           # Optional: comma-separated list of languages to exclude
           # exclude_languages: "HTML,CSS"
           # Optional: comma-separated list of repos to exclude

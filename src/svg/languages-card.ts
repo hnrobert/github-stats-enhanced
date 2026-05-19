@@ -1,19 +1,19 @@
 import type { GitHubStats } from "../github-api.ts";
-import { THEMES, getLangColor, escapeXml, type Theme } from "./utils.ts";
+import { getColors, getAdaptiveStyle, getLangColor, escapeXml, type Theme } from "./utils.ts";
 
-export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "dark"): string {
-  const c = THEMES[theme];
+export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adaptive"): string {
+  const c = getColors(theme);
   const langs = stats.stats.languageStats.slice(0, 8);
 
   if (langs.length === 0) {
     return `<svg width="495" height="195" viewBox="0 0 495 195" xmlns="http://www.w3.org/2000/svg">
+  ${getAdaptiveStyle(theme)}
   <rect width="495" height="195" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <text x="247" y="105" fill="${c.subTextColor}" font-size="14" text-anchor="middle"
     font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">No language data available</text>
 </svg>`;
   }
 
-  // Two-column layout
   const cols = 2;
   const colW = 220;
   const rowH = 42;
@@ -45,6 +45,7 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "dark")
   const height = startY + Math.ceil(langs.length / cols) * rowH + 20;
 
   return `<svg width="495" height="${height}" viewBox="0 0 495 ${height}" xmlns="http://www.w3.org/2000/svg">
+  ${getAdaptiveStyle(theme)}
   <rect width="495" height="${height}" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <text x="25" y="35" fill="${c.titleColor}" font-size="14" font-weight="600"
     font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">Most Used Languages</text>

@@ -1,12 +1,11 @@
 import type { GitHubStats } from "../github-api.ts";
-import { THEMES, formatNumber, type Theme } from "./utils.ts";
+import { getColors, getAdaptiveStyle, formatNumber, type Theme } from "./utils.ts";
 
-export function generateContributionsCard(stats: GitHubStats, theme: Theme = "dark"): string {
-  const c = THEMES[theme];
+export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive"): string {
+  const c = getColors(theme);
   const { yearlyContributions: yc, totalCommits } = stats.stats;
 
-  // Build contribution heatmap from weeks data
-  const weeks = yc.weeks.slice(-26); // last 26 weeks
+  const weeks = yc.weeks.slice(-26);
   const maxCount = Math.max(
     1,
     ...weeks.flatMap((w) => w.contributionDays.map((d) => d.contributionCount))
@@ -17,18 +16,15 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "da
   const heatmapX = 25;
   const heatmapY = 110;
 
+  // Use opacity for intensity so the base color (CSS var or fixed) adapts automatically
   const heatmapCells = weeks.map((week, wi) => {
     return week.contributionDays.map((day, di) => {
       const x = heatmapX + wi * (cellSize + cellGap);
       const y = heatmapY + di * (cellSize + cellGap);
       const intensity = day.contributionCount / maxCount;
-      const alpha = intensity === 0 ? 0.1 : 0.2 + intensity * 0.8;
-      const fill = theme === "dark"
-        ? `rgba(88,166,255,${alpha.toFixed(2)})`
-        : `rgba(9,105,218,${alpha.toFixed(2)})`;
-      return `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${fill}">
-        <title>${day.date}: ${day.contributionCount}</title>
-      </rect>`;
+      const opacity = intensity === 0 ? 0.1 : (0.2 + intensity * 0.8).toFixed(2);
+      return `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2"
+        fill="${c.heatmapColor}" opacity="${opacity}"><title>${day.date}: ${day.contributionCount}</title></rect>`;
     }).join("");
   }).join("");
 
@@ -51,10 +47,10 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "da
     </g>`;
   }).join("");
 
-  const heatmapW = weeks.length * (cellSize + cellGap);
   const height = heatmapY + 7 * (cellSize + cellGap) + 20;
 
   return `<svg width="495" height="${height}" viewBox="0 0 495 ${height}" xmlns="http://www.w3.org/2000/svg">
+  ${getAdaptiveStyle(theme)}
   <rect width="495" height="${height}" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <text x="25" y="35" fill="${c.titleColor}" font-size="14" font-weight="600"
     font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">Contributions (Last Year)</text>
