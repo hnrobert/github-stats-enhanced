@@ -1,4 +1,7 @@
-# github-stats-enhanced
+# GitHub Stats Enhanced
+
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-GitHub%20Stats%20Enhanced-blue.svg?colorA=24292e&colorB=0366d6&style=flat&longCache=true&logo=github)](https://github.com/marketplace/actions/github-stats-enhanced)
+[![License](https://img.shields.io/github/license/hnrobert/github-stats-enhanced)](https://github.com/hnrobert/github-stats-enhanced/blob/main/LICENSE)
 
 A GitHub Action that generates beautiful SVG stat cards for your GitHub profile README — stats card, language distribution, and contribution heatmap.
 
