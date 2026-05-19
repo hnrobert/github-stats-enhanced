@@ -1,0 +1,15 @@
+{
+  "name": "github-stats-enhanced",
+  "version": "1.0.0",
+  "description": "Generate GitHub stats SVG cards via GitHub Actions",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/index.ts --outfile dist/index.js --target bun",
+    "start": "bun src/index.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.4.0"
+  }
+}

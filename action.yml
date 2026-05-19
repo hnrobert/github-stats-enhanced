@@ -1,0 +1,32 @@
+name: "GitHub Stats Enhanced"
+description: "Generate GitHub stats SVG cards for profile README"
+author: "hnrobert"
+
+inputs:
+  github_user_name:
+    description: "GitHub username to generate stats for"
+    required: true
+  github_token:
+    description: "GitHub token for API access"
+    required: false
+    default: ""
+  output_dir:
+    description: "Output directory for generated SVGs"
+    required: false
+    default: "dist"
+  theme:
+    description: "Card theme: dark or light"
+    required: false
+    default: "dark"
+  exclude_languages:
+    description: "Comma-separated list of languages to exclude"
+    required: false
+    default: ""
+  exclude_repos:
+    description: "Comma-separated list of repos to exclude (owner/repo)"
+    required: false
+    default: ""
+
+runs:
+  using: "node20"
+  main: "dist/index.js"
