@@ -3,15 +3,29 @@ var __getProtoOf = Object.getPrototypeOf;
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+function __accessProp(key) {
+  return this[key];
+}
+var __toESMCache_node;
+var __toESMCache_esm;
 var __toESM = (mod, isNodeMode, target) => {
+  var canCache = mod != null && typeof mod === "object";
+  if (canCache) {
+    var cache = isNodeMode ? __toESMCache_node ??= new WeakMap : __toESMCache_esm ??= new WeakMap;
+    var cached = cache.get(mod);
+    if (cached)
+      return cached;
+  }
   target = mod != null ? __create(__getProtoOf(mod)) : {};
   const to = isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target;
   for (let key of __getOwnPropNames(mod))
     if (!__hasOwnProp.call(to, key))
       __defProp(to, key, {
-        get: () => mod[key],
+        get: __accessProp.bind(mod, key),
         enumerable: true
       });
+  if (canCache)
+    cache.set(mod, to);
   return to;
 };
 var __commonJS = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
@@ -286,7 +300,7 @@ async function fetchYearCommits(token, username, year) {
 }
 
 // src/api/index.ts
-async function fetchGitHubStats(token, username) {
+async function fetchGitHubStats(token, username, weightContributed = true) {
   const oneYearAgo = new Date;
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const [userData, data, ownRepos] = await Promise.all([
@@ -312,38 +326,52 @@ async function fetchGitHubStats(token, username) {
     allRepoKeys.add(`${cr.repository.owner.login}/${cr.repository.name}`);
   }
   const totalCommitsMap = new Map;
-  await Promise.all(Array.from(allRepoKeys).map(async (key) => {
-    const slash = key.indexOf("/");
-    const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
-    totalCommitsMap.set(key, count);
-  }));
+  const userCommitsOwnMap = new Map;
+  await Promise.all([
+    ...Array.from(allRepoKeys).map(async (key) => {
+      const slash = key.indexOf("/");
+      const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
+      totalCommitsMap.set(key, count);
+    }),
+    ...ownRepos.map(async (r) => {
+      const key = `${r.owner.login}/${r.name}`;
+      const count = await fetchCommitCount(token, r.owner.login, r.name);
+      userCommitsOwnMap.set(key, count);
+    })
+  ]);
   const commitMap = new Map;
+  for (const r of ownRepos) {
+    const key = `${r.owner.login}/${r.name}`;
+    commitMap.set(key, {
+      userCommits: userCommitsOwnMap.get(key) ?? 0,
+      totalCommits: totalCommitsMap.get(key) ?? 0
+    });
+  }
   for (const cr of lastYear.commitContributionsByRepository) {
     const key = `${cr.repository.owner.login}/${cr.repository.name}`;
+    if (commitMap.has(key))
+      continue;
     commitMap.set(key, {
       userCommits: cr.contributions.totalCount,
       totalCommits: totalCommitsMap.get(key) ?? 0
     });
   }
-  const repoWeight = new Map;
-  for (const [key, { userCommits, totalCommits: totalCommits2 }] of commitMap) {
-    const weight = totalCommits2 > 0 ? Math.min(userCommits / totalCommits2, 1) : 0;
-    repoWeight.set(key, weight);
-  }
   for (const repo of ownRepos) {
-    const key = `${repo.owner.login}/${repo.name}`;
-    const weight = repoWeight.get(key) ?? 1;
     if (repo.languages.edges.length === 0)
       continue;
     for (const edge of repo.languages.edges) {
-      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
+      langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
     }
   }
   for (const cr of lastYear.commitContributionsByRepository) {
     const key = `${cr.repository.owner.login}/${cr.repository.name}`;
     if (cr.repository.owner.login === username)
       continue;
-    const weight = repoWeight.get(key) ?? 0;
+    let weight = 1;
+    if (weightContributed) {
+      const cm = commitMap.get(key);
+      weight = cm && cm.totalCommits > 0 ? Math.min(cm.userCommits / cm.totalCommits, 1) : 0;
+    }
     if (weight === 0)
       continue;
     for (const edge of cr.repository.languages.edges) {
@@ -372,7 +400,7 @@ async function fetchGitHubStats(token, username) {
         percentage: repoTotal > 0 ? Math.round(e.size / repoTotal * 1000) / 10 : 0
       })),
       userCommits: cm?.userCommits ?? 0,
-      totalCommits: totalCommitsMap.get(key) ?? 0
+      totalCommits: cm?.totalCommits ?? 0
     };
   }).sort((a, b) => b.stars - a.stars);
   return {
@@ -3785,13 +3813,14 @@ function readFilterOptions() {
     fs2.mkdirSync(outputDir, { recursive: true });
     if (mode === "fetch" || mode === "all") {
       const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
-      const token = process.env.GITHUB_TOKEN || getInput("github_token");
+      const token = process.env.SELF_GITHUB_TOKEN || getInput("self_github_token") || process.env.GITHUB_TOKEN || getInput("github_token");
       if (!username)
         throw new Error("github_user_name is required");
       if (!token)
         throw new Error("GITHUB_TOKEN is required");
       log(`\uD83D\uDCCA Fetching GitHub stats for: ${username}`);
-      const stats = await fetchGitHubStats(token, username);
+      const weightContributed = getInput("weight_contributed_repos").toLowerCase() !== "false";
+      const stats = await fetchGitHubStats(token, username, weightContributed);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
       writeStatsYaml(dataFile, stats);
       log(`\uD83D\uDCC4 Stats saved to ${dataFile}`);
