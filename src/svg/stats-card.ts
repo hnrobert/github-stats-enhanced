@@ -1,6 +1,6 @@
 import octicons from "@primer/octicons";
 import type { GitHubStats } from "../github-api.ts";
-import { getColors, getAdaptiveStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
+import { getColors, getCardStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
 
 function octiconAt(name: string, color: string, x: number, y: number, size = 16): string {
   const icon = octicons[name as keyof typeof octicons];
@@ -50,11 +50,13 @@ function statBox(
     const numX = iconX + iconSize + iconGap;
 
     return `
+    <g class="i${i}">
     ${octiconAt(item.icon, c.textSecondary, iconX, iconTop, iconSize)}
     <text x="${numX}" y="${numBaseline}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
       text-anchor="start" font-family="${FONT}">${item.number}</text>
     <text x="${W / 2}" y="${labelBaseline}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
-      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
+      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
+    </g>`;
   }).join("");
 }
 
@@ -67,8 +69,8 @@ export function generateStatsCard1(stats: GitHubStats, theme: Theme = "adaptive"
     { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" },
   ];
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
 </svg>`;
 }
@@ -82,8 +84,8 @@ export function generateStatsCard2(stats: GitHubStats, theme: Theme = "adaptive"
     { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" },
   ];
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
 </svg>`;
 }

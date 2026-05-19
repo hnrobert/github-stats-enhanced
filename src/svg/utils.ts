@@ -51,6 +51,31 @@ export function getAdaptiveStyle(theme: Theme): string {
   </style>`;
 }
 
+// Full style block: theme vars (if adaptive) + entrance animations
+export function getCardStyle(theme: Theme): string {
+  const l = THEMES.light;
+  const d = THEMES.dark;
+  const themeBlock = theme === "adaptive" ? `
+    :root{--s-bg:${l.bg};--s-bd:${l.border};--s-tp:${l.textPrimary};
+      --s-ts:${l.textSecondary};--s-ac:${l.accentBlue};--s-pb:${l.progressBg};}
+    @media(prefers-color-scheme:dark){:root{
+      --s-bg:${d.bg};--s-bd:${d.border};--s-tp:${d.textPrimary};
+      --s-ts:${d.textSecondary};--s-ac:${d.accentBlue};--s-pb:${d.progressBg};}}` : "";
+  const ease = "cubic-bezier(.33,1,.68,1)";
+  return `<style>
+    ${themeBlock}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .card{animation:fadeUp .5s ${ease} both}
+    .title{animation:fadeUp .45s .08s ${ease} both}
+    .i0{animation:fadeUp .45s .14s ${ease} both}
+    .i1{animation:fadeUp .45s .24s ${ease} both}
+    .i2{animation:fadeUp .45s .34s ${ease} both}
+    .i3{animation:fadeUp .45s .44s ${ease} both}
+    .bar{animation:fadeIn .3s .25s ease both}
+  </style>`;
+}
+
 export function getColors(theme: Theme): ThemeColors {
   return theme === "adaptive" ? ADAPTIVE_COLORS : THEMES[theme];
 }

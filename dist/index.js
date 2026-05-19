@@ -401,17 +401,27 @@ var ADAPTIVE_COLORS = {
   accentBlue: "var(--s-ac)",
   progressBg: "var(--s-pb)"
 };
-function getAdaptiveStyle(theme) {
-  if (theme !== "adaptive")
-    return "";
+function getCardStyle(theme) {
   const l = THEMES.light;
   const d = THEMES.dark;
-  return `<style>
+  const themeBlock = theme === "adaptive" ? `
     :root{--s-bg:${l.bg};--s-bd:${l.border};--s-tp:${l.textPrimary};
       --s-ts:${l.textSecondary};--s-ac:${l.accentBlue};--s-pb:${l.progressBg};}
     @media(prefers-color-scheme:dark){:root{
       --s-bg:${d.bg};--s-bd:${d.border};--s-tp:${d.textPrimary};
-      --s-ts:${d.textSecondary};--s-ac:${d.accentBlue};--s-pb:${d.progressBg};}}
+      --s-ts:${d.textSecondary};--s-ac:${d.accentBlue};--s-pb:${d.progressBg};}}` : "";
+  const ease = "cubic-bezier(.33,1,.68,1)";
+  return `<style>
+    ${themeBlock}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .card{animation:fadeUp .5s ${ease} both}
+    .title{animation:fadeUp .45s .08s ${ease} both}
+    .i0{animation:fadeUp .45s .14s ${ease} both}
+    .i1{animation:fadeUp .45s .24s ${ease} both}
+    .i2{animation:fadeUp .45s .34s ${ease} both}
+    .i3{animation:fadeUp .45s .44s ${ease} both}
+    .bar{animation:fadeIn .3s .25s ease both}
   </style>`;
 }
 function getColors(theme) {
@@ -485,11 +495,13 @@ function statBox(items, c, W, H) {
     const iconX = W / 2 - groupW / 2;
     const numX = iconX + iconSize + iconGap;
     return `
+    <g class="i${i}">
     ${octiconAt(item.icon, c.textSecondary, iconX, iconTop, iconSize)}
     <text x="${numX}" y="${numBaseline}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
       text-anchor="start" font-family="${FONT}">${item.number}</text>
     <text x="${W / 2}" y="${labelBaseline}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
-      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
+      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
+    </g>`;
   }).join("");
 }
 function generateStatsCard1(stats, theme = "adaptive") {
@@ -501,8 +513,8 @@ function generateStatsCard1(stats, theme = "adaptive") {
     { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" }
   ];
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
 </svg>`;
 }
@@ -515,8 +527,8 @@ function generateStatsCard2(stats, theme = "adaptive") {
     { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" }
   ];
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
 </svg>`;
 }
@@ -530,8 +542,8 @@ function generateLanguagesCard(stats, theme = "adaptive") {
   const innerW = W - padX * 2;
   if (langs.length === 0) {
     return `<svg width="${W}" height="100" viewBox="0 0 ${W} 100" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>
 </svg>`;
   }
@@ -590,7 +602,8 @@ function generateLanguagesCard(stats, theme = "adaptive") {
       const pct = `${lang.percentage.toFixed(1)}%`;
       const nameX = cx + itemPadX + dotR * 2 + 6;
       const pctX = cx + iW - itemPadX;
-      return `<g>
+      const delay = (0.3 + idx * 0.07).toFixed(2);
+      return `<g style="animation:fadeUp .4s ${delay}s cubic-bezier(.33,1,.68,1) both">
         <rect x="${cx}" y="${rowY}" width="${iW}" height="${itemH}" rx="8"
           fill="rgba(128,128,128,0.07)" stroke="rgba(128,128,128,0.15)" stroke-width="1"/>
         <circle cx="${cx + itemPadX + dotR}" cy="${rowY + itemH / 2}" r="${dotR}" fill="${color}"/>
@@ -603,13 +616,20 @@ function generateLanguagesCard(stats, theme = "adaptive") {
   }).join("");
   const H = legendStartY + rows.length * (itemH + rowGap) - rowGap + 20;
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <g class="title">
   <text x="${W / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="20" font-weight="600"
     text-anchor="middle" font-family="${FONT}">Most Used Languages</text>
-  <rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="6" fill="${c.progressBg}"/>
-  <clipPath id="bc"><rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="6"/></clipPath>
-  <g clip-path="url(#bc)">${barSegments}</g>
+  </g>
+  <rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="6" fill="${c.progressBg}" class="bar"/>
+  <clipPath id="bc">
+    <rect x="${padX}" y="${barY}" width="0" height="${barH}" rx="6">
+      <animate attributeName="width" from="0" to="${innerW}" dur="0.7s" begin="0.2s"
+        calcMode="spline" keySplines="0.4 0 0.2 1" fill="freeze"/>
+    </rect>
+  </clipPath>
+  <g clip-path="url(#bc)" class="bar">${barSegments}</g>
   ${legendItems}
 </svg>`;
 }
@@ -631,10 +651,12 @@ function generateContributionsCard(stats, theme = "adaptive") {
   const numY = groupTop + numCapH;
   const labelY = numY + 10 + labelCapH;
   const leftSection = `
+    <g class="i0">
     <text x="${leftCX}" y="${numY}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
       text-anchor="middle" font-family="${FONT}">${formatNumber(totalCommits)}</text>
     <text x="${leftCX}" y="${labelY}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
-      text-anchor="middle" font-family="${FONT}">Total Commits</text>`;
+      text-anchor="middle" font-family="${FONT}">Total Commits</text>
+    </g>`;
   const rightCX = halfW + halfW / 2;
   const titleFontSize = 14;
   const titleCapH = titleFontSize * 0.72;
@@ -664,18 +686,22 @@ function generateContributionsCard(stats, theme = "adaptive") {
     const nY = rowTop + gridNumCapH;
     const lY = nY + 6 + gridLabelCapH;
     return `
+    <g class="i${i + 1}">
     <text x="${cx}" y="${nY}" fill="${c.accentBlue}" font-size="${gridNumFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">${item.value}</text>
     <text x="${cx}" y="${lY}" fill="${c.textSecondary}" font-size="${gridLabelFontSize}"
-      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
+      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
+    </g>`;
   }).join("");
   const rightSection = `
+    <g class="title">
     <text x="${rightCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
+    </g>
     ${gridCells}`;
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${leftSection}
   ${rightSection}
 </svg>`;

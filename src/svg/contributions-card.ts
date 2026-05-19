@@ -1,5 +1,5 @@
 import type { GitHubStats } from "../github-api.ts";
-import { getColors, getAdaptiveStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
+import { getColors, getCardStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
 
 // Matches homepage stat-box-wide layout:
 // Left half: stat-item (number + label, vertically centered)
@@ -24,10 +24,12 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
   const labelY = numY + 10 + labelCapH;
 
   const leftSection = `
+    <g class="i0">
     <text x="${leftCX}" y="${numY}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
       text-anchor="middle" font-family="${FONT}">${formatNumber(totalCommits)}</text>
     <text x="${leftCX}" y="${labelY}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
-      text-anchor="middle" font-family="${FONT}">Total Commits</text>`;
+      text-anchor="middle" font-family="${FONT}">Total Commits</text>
+    </g>`;
 
   // Right: title + 2x2 grid — all centered within right half
   const rightCX = halfW + halfW / 2;
@@ -65,20 +67,24 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
     const nY = rowTop + gridNumCapH;
     const lY = nY + 6 + gridLabelCapH;
     return `
+    <g class="i${i + 1}">
     <text x="${cx}" y="${nY}" fill="${c.accentBlue}" font-size="${gridNumFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">${item.value}</text>
     <text x="${cx}" y="${lY}" fill="${c.textSecondary}" font-size="${gridLabelFontSize}"
-      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
+      text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
+    </g>`;
   }).join("");
 
   const rightSection = `
+    <g class="title">
     <text x="${rightCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
+    </g>
     ${gridCells}`;
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${leftSection}
   ${rightSection}
 </svg>`;

@@ -1,5 +1,5 @@
 import type { GitHubStats } from "../github-api.ts";
-import { getColors, getAdaptiveStyle, getLangColor, escapeXml, type Theme, FONT } from "./utils.ts";
+import { getColors, getCardStyle, getLangColor, escapeXml, type Theme, FONT } from "./utils.ts";
 
 // Matches homepage LanguagesCard:
 // - Title centered
@@ -14,8 +14,8 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
 
   if (langs.length === 0) {
     return `<svg width="${W}" height="100" viewBox="0 0 ${W} 100" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>
 </svg>`;
   }
@@ -92,7 +92,8 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
       const nameX = cx + itemPadX + dotR * 2 + 6;
       const pctX = cx + iW - itemPadX;
 
-      return `<g>
+      const delay = (0.3 + idx * 0.07).toFixed(2);
+      return `<g style="animation:fadeUp .4s ${delay}s cubic-bezier(.33,1,.68,1) both">
         <rect x="${cx}" y="${rowY}" width="${iW}" height="${itemH}" rx="8"
           fill="rgba(128,128,128,0.07)" stroke="rgba(128,128,128,0.15)" stroke-width="1"/>
         <circle cx="${cx + itemPadX + dotR}" cy="${rowY + itemH / 2}" r="${dotR}" fill="${color}"/>
@@ -107,13 +108,20 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
   const H = legendStartY + rows.length * (itemH + rowGap) - rowGap + 20;
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  ${getAdaptiveStyle(theme)}
-  <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${getCardStyle(theme)}
+  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <g class="title">
   <text x="${W / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="20" font-weight="600"
     text-anchor="middle" font-family="${FONT}">Most Used Languages</text>
-  <rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="6" fill="${c.progressBg}"/>
-  <clipPath id="bc"><rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="6"/></clipPath>
-  <g clip-path="url(#bc)">${barSegments}</g>
+  </g>
+  <rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="6" fill="${c.progressBg}" class="bar"/>
+  <clipPath id="bc">
+    <rect x="${padX}" y="${barY}" width="0" height="${barH}" rx="6">
+      <animate attributeName="width" from="0" to="${innerW}" dur="0.7s" begin="0.2s"
+        calcMode="spline" keySplines="0.4 0 0.2 1" fill="freeze"/>
+    </rect>
+  </clipPath>
+  <g clip-path="url(#bc)" class="bar">${barSegments}</g>
   ${legendItems}
 </svg>`;
 }
