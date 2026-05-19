@@ -1,10 +1,17 @@
 #!/usr/bin/env bun
 // Local test runner — outputs SVGs + demo.html + report.md to ./output/
-// Usage: bun scripts/test-local.ts [username] [theme]
+//
+// Usage:
+//   bun scripts/test-local.ts [username] [theme]          — fetch + generate (default)
+//   bun scripts/test-local.ts [username] --fetch-only     — fetch API → output/stats.yml only
+//   bun scripts/test-local.ts --generate-only             — generate from output/stats.yml
+//   bun scripts/test-local.ts --report-only               — generate report from output/stats.yml
+//
 // Requires GITHUB_TOKEN in env or .env.local
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { fetchGitHubStats } from "../src/github-api.ts";
+import { writeStatsYaml, readStatsYaml } from "../src/data.ts";
 import { generateStatsCard1, generateStatsCard2 } from "../src/svg/stats-card.ts";
 import { generateLanguagesCard } from "../src/svg/languages-card.ts";
 import { generateContributionsCard } from "../src/svg/contributions-card.ts";
@@ -24,30 +31,63 @@ if (existsSync(".env.local")) {
   }
 }
 
-const username = process.argv[2] || process.env.GITHUB_USER_NAME || process.env.GITHUB_ACTOR;
-const theme = (process.argv[3] || "adaptive") as Theme;
+const args = process.argv.slice(2);
+const fetchOnly    = args.includes("--fetch-only");
+const generateOnly = args.includes("--generate-only");
+const reportOnly   = args.includes("--report-only");
+const usernameArg  = args.find((a) => !a.startsWith("--"));
+const themeArg     = args.find((a) => !a.startsWith("--") && a !== usernameArg);
+
+const username = usernameArg || process.env.GITHUB_USER_NAME || process.env.GITHUB_ACTOR;
+const theme = (themeArg || "adaptive") as Theme;
 const token = process.env.GITHUB_TOKEN || "";
 
-if (!username) {
-  console.error("Usage: bun scripts/test-local.ts <username> [theme]");
-  console.error("  or set GITHUB_USER_NAME in .env.local");
-  process.exit(1);
-}
-if (!token) {
-  console.error("GITHUB_TOKEN is required in .env.local or environment");
-  process.exit(1);
-}
+const outDir  = "output";
+const dataFile = `${outDir}/stats.yml`;
 
-console.log(`Fetching stats for: ${username}`);
-const stats = await fetchGitHubStats(token, username);
-console.log(`Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
-
-const outDir = "output";
 mkdirSync(outDir, { recursive: true });
+
+// ── Fetch ────────────────────────────────────────────────────────────────────
+
+let stats: GitHubStats;
+
+if (generateOnly || reportOnly) {
+  if (!existsSync(dataFile)) {
+    console.error(`${dataFile} not found — run without --generate-only first`);
+    process.exit(1);
+  }
+  console.log(`Loading stats from ${dataFile}`);
+  stats = readStatsYaml(dataFile);
+} else {
+  if (!username) {
+    console.error("Usage: bun scripts/test-local.ts <username> [--fetch-only]");
+    console.error("  or set GITHUB_USER_NAME in .env.local");
+    process.exit(1);
+  }
+  if (!token) {
+    console.error("GITHUB_TOKEN is required in .env.local or environment");
+    process.exit(1);
+  }
+  console.log(`Fetching stats for: ${username}`);
+  stats = await fetchGitHubStats(token, username);
+  console.log(`Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
+  writeStatsYaml(dataFile, stats);
+  console.log(`Wrote ${dataFile}`);
+  if (fetchOnly) process.exit(0);
+}
+
+// ── Report ───────────────────────────────────────────────────────────────────
+
+if (reportOnly) {
+  writeFileSync(`${outDir}/report.md`, buildReport(stats), "utf-8");
+  console.log(`Wrote ${outDir}/report.md`);
+  process.exit(0);
+}
+
+// ── Generate SVGs + demo ─────────────────────────────────────────────────────
 
 const ro = { responsive: true };
 
-// Responsive SVGs — same filenames as fixed, written last so they overwrite
 const svgs = [
   { name: "stats1-adaptive.svg",        content: generateStatsCard1(stats, "adaptive") },
   { name: "stats1-dark.svg",            content: generateStatsCard1(stats, "dark") },
@@ -63,7 +103,6 @@ const svgs = [
   { name: "languages-light.svg",        content: generateLanguagesCard(stats, "light") },
 ];
 
-// Responsive variants — same names, overwrite the fixed ones above
 const responsiveSvgs = [
   { name: "stats1-adaptive.svg",        content: generateStatsCard1(stats, "adaptive", ro) },
   { name: "stats2-adaptive.svg",        content: generateStatsCard2(stats, "adaptive", ro) },
@@ -75,8 +114,7 @@ for (const { name, content } of svgs) {
   writeFileSync(`${outDir}/${name}`, content, "utf-8");
 }
 
-// Build demo HTML with both versions inlined before overwriting the adaptive files
-const demoHtml = buildDemo(stats, username, {
+const demoHtml = buildDemo(stats, stats.user.login, {
   stats1Responsive:   generateStatsCard1(stats, "adaptive", ro),
   stats2Responsive:   generateStatsCard2(stats, "adaptive", ro),
   contribResponsive:  generateContributionsCard(stats, "adaptive", ro),
@@ -92,6 +130,8 @@ console.log(`Wrote ${svgs.length} SVGs to ./${outDir}/ (adaptive replaced with r
 
 writeFileSync(`${outDir}/report.md`, buildReport(stats), "utf-8");
 console.log(`Wrote ./${outDir}/report.md`);
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildReport(s: GitHubStats): string {
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -168,12 +208,10 @@ function buildDemo(_s: GitHubStats, user: string, cards: {
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0f172a; --surface: rgba(255,255,255,0.05);
-      --border: rgba(255,255,255,0.1); --text: #f8fafc; --muted: #94a3b8; --accent: #60a5fa;
+      --bg: #0f172a; --border: rgba(255,255,255,0.1); --text: #f8fafc; --muted: #94a3b8; --accent: #60a5fa;
     }
     @media (prefers-color-scheme: light) {
-      :root { --bg: #f1f5f9; --surface: rgba(255,255,255,0.8);
-        --border: rgba(0,0,0,0.08); --text: #1e293b; --muted: #64748b; --accent: #3b82f6; }
+      :root { --bg: #f1f5f9; --border: rgba(0,0,0,0.08); --text: #1e293b; --muted: #64748b; --accent: #3b82f6; }
     }
     body { background: var(--bg); color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -198,7 +236,7 @@ function buildDemo(_s: GitHubStats, user: string, cards: {
 </head>
 <body>
   <h1>GitHub Stats Enhanced</h1>
-  <p class="subtitle">Local preview for <strong>${user}</strong> — drag the box corner to resize and see aspect ratio changes</p>
+  <p class="subtitle">Local preview for <strong>${user}</strong> — resize the window or drag the box edge to see responsive behaviour</p>
 
   <section>
     <h2>Responsive cards <span class="tag">responsive: true</span></h2>

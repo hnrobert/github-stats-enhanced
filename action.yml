@@ -13,6 +13,14 @@ inputs:
     description: "GitHub token for API access"
     required: false
     default: ""
+  mode:
+    description: "Pipeline mode: 'all' (fetch + generate), 'fetch' (API → stats.yml only), 'generate' (stats.yml → SVGs only)"
+    required: false
+    default: "all"
+  data_file:
+    description: "Path to the stats YAML file (used by fetch to write, generate to read)"
+    required: false
+    default: ""
   output_dir:
     description: "Output directory for generated SVGs"
     required: false

@@ -11,9 +11,11 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/js-yaml": "^4.0.9",
     "typescript": "^5.4.0"
   },
   "dependencies": {
-    "@primer/octicons": "^19.25.0"
+    "@primer/octicons": "^19.25.0",
+    "js-yaml": "^4.1.1"
   }
 }
