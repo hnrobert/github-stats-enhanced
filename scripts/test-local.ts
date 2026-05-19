@@ -189,9 +189,9 @@ function buildDemo(_s: GitHubStats, user: string, cards: {
       font-size: 0.75rem; font-weight: 600; padding: 1px 7px; margin-left: 8px; vertical-align: middle; }
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 1.25rem; }
     @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
-    .resizable { resize: both; overflow: hidden;
+    .resizable { resize: horizontal; overflow: hidden;
       border: 1px dashed var(--border); border-radius: 12px;
-      padding: 1.25rem; min-width: 280px; min-height: 100px; max-width: 100%; width: 100%; }
+      padding: 1.25rem; min-width: 280px; max-width: 100%; width: 100%; }
     .resize-hint { color: var(--muted); font-size: 0.78rem; margin-bottom: 1rem; }
     .spacer { margin-top: 1.25rem; }
   </style>
@@ -202,9 +202,9 @@ function buildDemo(_s: GitHubStats, user: string, cards: {
 
   <section>
     <h2>Responsive cards <span class="tag">responsive: true</span></h2>
-    <p class="desc">SVGs use <code>width="100%"</code> + <code>preserveAspectRatio="none"</code> — drag the bottom-right corner to change both width and height.</p>
+    <p class="desc">SVGs use <code>width="100%"</code> — scales with container width while preserving aspect ratio. Drag the right edge of the box below.</p>
     <div class="resizable">
-      <p class="resize-hint">↔↕ drag bottom-right corner to resize</p>
+      <p class="resize-hint">↔ drag right edge to resize</p>
       <div class="stats-grid">
         <div>${cards.stats1Responsive}</div>
         <div>${cards.stats2Responsive}</div>

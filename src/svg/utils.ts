@@ -87,8 +87,7 @@ export function getCardStyle(theme: Theme): string {
 export function svgOpen(w: number, h: number, responsive = false): string {
   const wAttr = responsive ? `width="100%"` : `width="${w}"`;
   const hAttr = responsive ? `` : `height="${h}"`;
-  const par = responsive ? ` preserveAspectRatio="none"` : ``;
-  return `<svg ${wAttr} ${hAttr}${par} viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
+  return `<svg ${wAttr} ${hAttr} viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
 }
 
 export function getColors(theme: Theme): ThemeColors {
