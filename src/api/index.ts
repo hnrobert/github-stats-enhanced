@@ -1,6 +1,12 @@
 import { graphql, fetchUser, fetchAllRepos, fetchYearCommits } from "./client.ts";
 import { CONTRIBUTIONS_QUERY } from "./queries.ts";
-import type { GitHubStats, LanguageStat, RepoInfo } from "./types.ts";
+import type {
+  GitHubStats,
+  LanguageStat,
+  RepoInfo,
+  RawRepo,
+  RawContributionsResponse,
+} from "./types.ts";
 
 export type { GitHubStats, LanguageStat, RepoInfo, YearlyContributions } from "./types.ts";
 
@@ -17,11 +23,11 @@ export async function fetchGitHubStats(
 
   const [userData, data, ownRepos] = await Promise.all([
     fetchUser(token, username),
-    graphql(token, CONTRIBUTIONS_QUERY, { username, from: oneYearAgo.toISOString() }),
+    graphql<RawContributionsResponse>(token, CONTRIBUTIONS_QUERY, { username, from: oneYearAgo.toISOString() }),
     fetchAllRepos(token, username),
   ]);
 
-  const gqlUser  = (data as any).user;
+  const gqlUser  = data.user;
   const lastYear = gqlUser.lastYearContributions;
 
   const createdYear = new Date(gqlUser.createdAt).getFullYear();
@@ -31,30 +37,28 @@ export async function fetchGitHubStats(
     totalCommits += await fetchYearCommits(token, username, y, excludeRepos);
   }
 
-  const totalStars = ownRepos.reduce((s: number, r: any) => s + (r.stargazerCount ?? 0), 0);
-  const totalForks = ownRepos.reduce((s: number, r: any) => s + (r.forkCount ?? 0), 0);
+  const totalStars = ownRepos.reduce((s, r) => s + r.stargazerCount, 0);
+  const totalForks = ownRepos.reduce((s, r) => s + r.forkCount, 0);
 
   const langMap = new Map<string, number>();
 
   for (const repo of ownRepos) {
-    if (excludeRepos.has(`${repo.owner?.login}/${repo.name}`)) continue;
-    for (const edge of repo.languages?.edges ?? []) {
-      const lang: string = edge.node.name;
-      if (!excludeLanguages.has(lang))
-        langMap.set(lang, (langMap.get(lang) ?? 0) + edge.size);
+    if (excludeRepos.has(`${repo.owner.login}/${repo.name}`)) continue;
+    for (const edge of repo.languages.edges) {
+      if (!excludeLanguages.has(edge.node.name))
+        langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size);
     }
   }
 
-  for (const cr of lastYear.commitContributionsByRepository ?? []) {
-    const repoName = `${cr.repository?.owner?.login}/${cr.repository?.name}`;
+  for (const cr of lastYear.commitContributionsByRepository) {
+    const repoName = `${cr.repository.owner.login}/${cr.repository.name}`;
     if (excludeRepos.has(repoName)) continue;
-    const commits: number = cr.contributions?.totalCount ?? 0;
+    const commits = cr.contributions.totalCount;
     if (commits === 0) continue;
     const weight = Math.min(commits / 100, 0.8);
-    for (const edge of cr.repository?.languages?.edges ?? []) {
-      const lang: string = edge.node.name;
-      if (!excludeLanguages.has(lang))
-        langMap.set(lang, (langMap.get(lang) ?? 0) + edge.size * weight);
+    for (const edge of cr.repository.languages.edges) {
+      if (!excludeLanguages.has(edge.node.name))
+        langMap.set(edge.node.name, (langMap.get(edge.node.name) ?? 0) + edge.size * weight);
     }
   }
 
@@ -69,25 +73,25 @@ export async function fetchGitHubStats(
     .slice(0, 8);
 
   const repos: RepoInfo[] = ownRepos
-    .filter((r: any) => !excludeRepos.has(`${r.owner?.login}/${r.name}`))
-    .map((r: any) => {
-      const edges: any[] = r.languages?.edges ?? [];
-      const repoTotal = edges.reduce((s: number, e: any) => s + e.size, 0);
+    .filter((r: RawRepo) => !excludeRepos.has(`${r.owner.login}/${r.name}`))
+    .map((r: RawRepo) => {
+      const edges = r.languages.edges;
+      const repoTotal = edges.reduce((s, e) => s + e.size, 0);
       return {
-        name:  r.name ?? "",
-        owner: r.owner?.login ?? username,
-        stars: r.stargazerCount ?? 0,
-        forks: r.forkCount ?? 0,
+        name:  r.name,
+        owner: r.owner.login,
+        stars: r.stargazerCount,
+        forks: r.forkCount,
         languages: edges
-          .filter((e: any) => !excludeLanguages.has(e.node.name))
-          .map((e: any) => ({
+          .filter((e) => !excludeLanguages.has(e.node.name))
+          .map((e) => ({
             name: e.node.name,
             size: e.size,
             percentage: repoTotal > 0 ? Math.round((e.size / repoTotal) * 1000) / 10 : 0,
           })),
       };
     })
-    .sort((a: RepoInfo, b: RepoInfo) => b.stars - a.stars);
+    .sort((a, b) => b.stars - a.stars);
 
   return {
     user: {
@@ -105,16 +109,16 @@ export async function fetchGitHubStats(
       totalStars,
       totalForks,
       totalCommits,
-      contributedRepos: lastYear.totalRepositoriesWithContributedCommits ?? 0,
+      contributedRepos: lastYear.totalRepositoriesWithContributedCommits,
       languageStats,
       yearlyContributions: {
-        year:    currentYear,
-        total:   lastYear.contributionCalendar?.totalContributions ?? 0,
-        commits: lastYear.totalCommitContributions ?? 0,
-        issues:  lastYear.totalIssueContributions ?? 0,
-        pullRequests: lastYear.totalPullRequestContributions ?? 0,
-        reviews: lastYear.totalPullRequestReviewContributions ?? 0,
-        weeks:   lastYear.contributionCalendar?.weeks ?? [],
+        year:         currentYear,
+        total:        lastYear.contributionCalendar.totalContributions,
+        commits:      lastYear.totalCommitContributions,
+        issues:       lastYear.totalIssueContributions,
+        pullRequests: lastYear.totalPullRequestContributions,
+        reviews:      lastYear.totalPullRequestReviewContributions,
+        weeks:        lastYear.contributionCalendar.weeks,
       },
     },
     repos,

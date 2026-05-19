@@ -1,4 +1,10 @@
 import { REPOS_PAGE_QUERY, YEAR_COMMITS_QUERY } from "./queries.ts";
+import type {
+  RawUserResponse,
+  RawRepo,
+  RawReposResponse,
+  RawYearCommitsResponse,
+} from "./types.ts";
 
 const HEADERS = (token: string) => ({
   Authorization: `Bearer ${token}`,
@@ -6,35 +12,36 @@ const HEADERS = (token: string) => ({
   "User-Agent": "github-stats-enhanced",
 });
 
-export async function graphql(
+export async function graphql<T>(
   token: string,
   query: string,
   variables: Record<string, unknown>
-): Promise<Record<string, unknown>> {
+): Promise<T> {
   const res = await fetch("https://api.github.com/graphql", {
     method: "POST",
     headers: HEADERS(token),
     body: JSON.stringify({ query, variables }),
   });
   if (!res.ok) throw new Error(`GraphQL request failed: ${res.status}`);
-  const data = await res.json() as { data?: unknown; errors?: unknown[] };
-  if (data.errors) throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
-  return data.data as Record<string, unknown>;
+  const body = await res.json() as { data?: T; errors?: unknown[] };
+  if (body.errors) throw new Error(`GraphQL errors: ${JSON.stringify(body.errors)}`);
+  if (body.data === undefined) throw new Error("GraphQL response missing data");
+  return body.data;
 }
 
-export async function fetchUser(token: string, username: string): Promise<any> {
+export async function fetchUser(token: string, username: string): Promise<RawUserResponse> {
   const res = await fetch(`https://api.github.com/users/${username}`, {
     headers: { ...HEADERS(token), Accept: "application/vnd.github.v3+json" },
   });
   if (!res.ok) throw new Error(`Failed to fetch user: ${res.status}`);
-  return res.json();
+  return res.json() as Promise<RawUserResponse>;
 }
 
-export async function fetchAllRepos(token: string, username: string): Promise<any[]> {
-  const repos: any[] = [];
+export async function fetchAllRepos(token: string, username: string): Promise<RawRepo[]> {
+  const repos: RawRepo[] = [];
   let cursor: string | null = null;
   do {
-    const page = await graphql(token, REPOS_PAGE_QUERY, { username, after: cursor }) as any;
+    const page: RawReposResponse = await graphql<RawReposResponse>(token, REPOS_PAGE_QUERY, { username, after: cursor });
     const repoPage = page.user.repositories;
     repos.push(...repoPage.nodes);
     cursor = repoPage.pageInfo.hasNextPage ? repoPage.pageInfo.endCursor : null;
@@ -50,11 +57,10 @@ export async function fetchYearCommits(
 ): Promise<number> {
   const from = new Date(`${year}-01-01T00:00:00Z`).toISOString();
   const to   = new Date(`${year}-12-31T23:59:59Z`).toISOString();
-  const data = await graphql(token, YEAR_COMMITS_QUERY, { username, from, to }) as any;
-  const col = data.user?.contributionsCollection;
-  const total: number = col?.totalCommitContributions ?? 0;
-  const excluded = (col?.commitContributionsByRepository ?? [] as any[])
-    .filter((r: any) => excludeRepos.has(r.repository?.nameWithOwner ?? ""))
-    .reduce((s: number, r: any) => s + (r.contributions?.totalCount ?? 0), 0);
-  return total - excluded;
+  const data = await graphql<RawYearCommitsResponse>(token, YEAR_COMMITS_QUERY, { username, from, to });
+  const col = data.user.contributionsCollection;
+  const excluded = col.commitContributionsByRepository
+    .filter((r) => excludeRepos.has(r.repository.nameWithOwner))
+    .reduce((s, r) => s + r.contributions.totalCount, 0);
+  return col.totalCommitContributions - excluded;
 }

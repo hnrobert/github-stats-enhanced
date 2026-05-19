@@ -48,7 +48,7 @@ import type { Theme } from "./svg/theme.ts";
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);
     }
-  } catch (e: any) {
-    setFailed(`Action failed: ${e.message}`);
+  } catch (e) {
+    setFailed(`Action failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 })();
