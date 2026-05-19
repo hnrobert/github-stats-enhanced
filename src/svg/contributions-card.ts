@@ -1,15 +1,12 @@
 import type { GitHubStats } from "../github-api.ts";
-import { getColors, getCardStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
+import { getColors, getCardStyle, svgOpen, formatNumber, escapeXml, type Theme, type CardOptions, FONT } from "./utils.ts";
 
-// Matches homepage stat-box-wide layout:
-// Left half: stat-item (number + label, vertically centered)
-// Right half: contributions-detail (title + 2x2 grid)
-// No divider — CSS grid handles the split
-export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive"): string {
+export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
   const { yearlyContributions: yc, totalCommits } = stats.stats;
 
-  const W = 460; const H = 180;
+  const W = opts.width ?? 460;
+  const H = opts.height ?? 180;
   const halfW = W / 2;
 
   // Left: Total Commits — vertically centered
@@ -82,7 +79,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
     </g>
     ${gridCells}`;
 
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${leftSection}

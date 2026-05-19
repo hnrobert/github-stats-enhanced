@@ -1,6 +1,6 @@
 import octicons from "@primer/octicons";
 import type { GitHubStats } from "../github-api.ts";
-import { getColors, getCardStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
+import { getColors, getCardStyle, svgOpen, formatNumber, escapeXml, type Theme, type CardOptions, FONT } from "./utils.ts";
 
 function octiconAt(name: string, color: string, x: number, y: number, size = 16): string {
   const icon = octicons[name as keyof typeof octicons];
@@ -61,14 +61,15 @@ function statBox(
 }
 
 // Card 1: Followers + Total Stars
-export function generateStatsCard1(stats: GitHubStats, theme: Theme = "adaptive"): string {
+export function generateStatsCard1(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
-  const W = 220; const H = 200;
+  const W = opts.width ?? 220;
+  const H = opts.height ?? 200;
   const items = [
     { number: formatNumber(stats.user.followers),   label: "Followers",   icon: "people" },
     { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" },
   ];
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
@@ -76,20 +77,21 @@ export function generateStatsCard1(stats: GitHubStats, theme: Theme = "adaptive"
 }
 
 // Card 2: Public Repos + Contributed Repos
-export function generateStatsCard2(stats: GitHubStats, theme: Theme = "adaptive"): string {
+export function generateStatsCard2(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
-  const W = 220; const H = 200;
+  const W = opts.width ?? 220;
+  const H = opts.height ?? 200;
   const items = [
     { number: formatNumber(stats.user.public_repos),      label: "Public Repos",      icon: "repo" },
     { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" },
   ];
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
 </svg>`;
 }
 
-export function generateStatsCard(stats: GitHubStats, theme: Theme = "adaptive"): string {
-  return generateStatsCard1(stats, theme);
+export function generateStatsCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
+  return generateStatsCard1(stats, theme, opts);
 }

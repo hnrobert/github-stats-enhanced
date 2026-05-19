@@ -1,5 +1,11 @@
 export type Theme = "dark" | "light" | "adaptive";
 
+export interface CardOptions {
+  width?: number;
+  height?: number;
+  responsive?: boolean;
+}
+
 export interface ThemeColors {
   bg: string;
   border: string;
@@ -74,6 +80,13 @@ export function getCardStyle(theme: Theme): string {
     .i3{animation:fadeUp .45s .44s ${ease} both}
     .bar{animation:fadeIn .3s .25s ease both}
   </style>`;
+}
+
+export function svgOpen(w: number, h: number, responsive = false): string {
+  const wAttr = responsive ? `width="100%"` : `width="${w}"`;
+  const hAttr = responsive ? `` : `height="${h}"`;
+  const par = responsive ? ` preserveAspectRatio="none"` : ``;
+  return `<svg ${wAttr} ${hAttr}${par} viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
 }
 
 export function getColors(theme: Theme): ThemeColors {

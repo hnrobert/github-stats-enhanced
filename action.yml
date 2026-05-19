@@ -29,6 +29,30 @@ inputs:
     description: "Comma-separated list of repos to exclude (owner/repo)"
     required: false
     default: ""
+  responsive:
+    description: "Set to 'true' to generate SVGs with width=100% (scales to container width)"
+    required: false
+    default: "true"
+  stats_width:
+    description: "Width in pixels for stats cards (default: 220)"
+    required: false
+    default: ""
+  stats_height:
+    description: "Height in pixels for stats cards (default: 200)"
+    required: false
+    default: ""
+  contributions_width:
+    description: "Width in pixels for contributions card (default: 460)"
+    required: false
+    default: ""
+  contributions_height:
+    description: "Height in pixels for contributions card (default: 180)"
+    required: false
+    default: ""
+  languages_width:
+    description: "Width in pixels for languages card (default: 500)"
+    required: false
+    default: ""
 
 runs:
   using: "node24"

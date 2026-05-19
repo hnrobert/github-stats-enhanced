@@ -424,6 +424,12 @@ function getCardStyle(theme) {
     .bar{animation:fadeIn .3s .25s ease both}
   </style>`;
 }
+function svgOpen(w, h, responsive = false) {
+  const wAttr = responsive ? `width="100%"` : `width="${w}"`;
+  const hAttr = responsive ? `` : `height="${h}"`;
+  const par = responsive ? ` preserveAspectRatio="none"` : ``;
+  return `<svg ${wAttr} ${hAttr}${par} viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
+}
 function getColors(theme) {
   return theme === "adaptive" ? ADAPTIVE_COLORS : THEMES[theme];
 }
@@ -504,29 +510,29 @@ function statBox(items, c, W, H) {
     </g>`;
   }).join("");
 }
-function generateStatsCard1(stats, theme = "adaptive") {
+function generateStatsCard1(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
-  const W = 220;
-  const H = 200;
+  const W = opts.width ?? 220;
+  const H = opts.height ?? 200;
   const items = [
     { number: formatNumber(stats.user.followers), label: "Followers", icon: "people" },
     { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" }
   ];
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
 </svg>`;
 }
-function generateStatsCard2(stats, theme = "adaptive") {
+function generateStatsCard2(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
-  const W = 220;
-  const H = 200;
+  const W = opts.width ?? 220;
+  const H = opts.height ?? 200;
   const items = [
     { number: formatNumber(stats.user.public_repos), label: "Public Repos", icon: "repo" },
     { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" }
   ];
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${statBox(items, c, W, H)}
@@ -534,14 +540,14 @@ function generateStatsCard2(stats, theme = "adaptive") {
 }
 
 // src/svg/languages-card.ts
-function generateLanguagesCard(stats, theme = "adaptive") {
+function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
   const langs = stats.stats.languageStats.slice(0, 8);
-  const W = 500;
+  const W = opts.width ?? 500;
   const padX = 28;
   const innerW = W - padX * 2;
   if (langs.length === 0) {
-    return `<svg width="${W}" height="100" viewBox="0 0 ${W} 100" xmlns="http://www.w3.org/2000/svg">
+    return `${svgOpen(W, 100, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>
@@ -615,7 +621,7 @@ function generateLanguagesCard(stats, theme = "adaptive") {
     }).join("");
   }).join("");
   const H = legendStartY + rows.length * (itemH + rowGap) - rowGap + 20;
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <g class="title">
@@ -635,11 +641,11 @@ function generateLanguagesCard(stats, theme = "adaptive") {
 }
 
 // src/svg/contributions-card.ts
-function generateContributionsCard(stats, theme = "adaptive") {
+function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
   const { yearlyContributions: yc, totalCommits } = stats.stats;
-  const W = 460;
-  const H = 180;
+  const W = opts.width ?? 460;
+  const H = opts.height ?? 180;
   const halfW = W / 2;
   const leftCX = halfW / 2;
   const numFontSize = 28;
@@ -699,7 +705,7 @@ function generateContributionsCard(stats, theme = "adaptive") {
       text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
     </g>
     ${gridCells}`;
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${leftSection}
@@ -710,6 +716,16 @@ function generateContributionsCard(stats, theme = "adaptive") {
 // src/index.ts
 function getInput(name) {
   return process.env[`INPUT_${name.replace(/ /g, "_").toUpperCase()}`] ?? "";
+}
+function getIntInput(name) {
+  const v = getInput(name).trim();
+  if (!v)
+    return;
+  const n = parseInt(v, 10);
+  return isNaN(n) ? undefined : n;
+}
+function getBoolInput(name) {
+  return getInput(name).trim().toLowerCase() === "true";
 }
 function setFailed(message) {
   process.exitCode = 1;
@@ -726,6 +742,21 @@ function log(message) {
     const theme = getInput("theme") || "adaptive";
     const excludeLanguages = getInput("exclude_languages").split(",").map((s) => s.trim()).filter(Boolean);
     const excludeRepos = getInput("exclude_repos").split(",").map((s) => s.trim()).filter(Boolean);
+    const responsive = getBoolInput("responsive");
+    const statsOpts = {
+      width: getIntInput("stats_width"),
+      height: getIntInput("stats_height"),
+      responsive
+    };
+    const contribOpts = {
+      width: getIntInput("contributions_width"),
+      height: getIntInput("contributions_height"),
+      responsive
+    };
+    const langOpts = {
+      width: getIntInput("languages_width"),
+      responsive
+    };
     if (!username)
       throw new Error("github_user_name is required");
     if (!token)
@@ -735,22 +766,22 @@ function log(message) {
     log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
     fs.mkdirSync(outputDir, { recursive: true });
     const outputs = [
-      { name: "stats1.svg", content: generateStatsCard1(stats, theme) },
-      { name: "stats1-adaptive.svg", content: generateStatsCard1(stats, "adaptive") },
-      { name: "stats1-dark.svg", content: generateStatsCard1(stats, "dark") },
-      { name: "stats1-light.svg", content: generateStatsCard1(stats, "light") },
-      { name: "stats2.svg", content: generateStatsCard2(stats, theme) },
-      { name: "stats2-adaptive.svg", content: generateStatsCard2(stats, "adaptive") },
-      { name: "stats2-dark.svg", content: generateStatsCard2(stats, "dark") },
-      { name: "stats2-light.svg", content: generateStatsCard2(stats, "light") },
-      { name: "contributions.svg", content: generateContributionsCard(stats, theme) },
-      { name: "contributions-adaptive.svg", content: generateContributionsCard(stats, "adaptive") },
-      { name: "contributions-dark.svg", content: generateContributionsCard(stats, "dark") },
-      { name: "contributions-light.svg", content: generateContributionsCard(stats, "light") },
-      { name: "languages.svg", content: generateLanguagesCard(stats, theme) },
-      { name: "languages-adaptive.svg", content: generateLanguagesCard(stats, "adaptive") },
-      { name: "languages-dark.svg", content: generateLanguagesCard(stats, "dark") },
-      { name: "languages-light.svg", content: generateLanguagesCard(stats, "light") }
+      { name: "stats1.svg", content: generateStatsCard1(stats, theme, statsOpts) },
+      { name: "stats1-adaptive.svg", content: generateStatsCard1(stats, "adaptive", statsOpts) },
+      { name: "stats1-dark.svg", content: generateStatsCard1(stats, "dark", statsOpts) },
+      { name: "stats1-light.svg", content: generateStatsCard1(stats, "light", statsOpts) },
+      { name: "stats2.svg", content: generateStatsCard2(stats, theme, statsOpts) },
+      { name: "stats2-adaptive.svg", content: generateStatsCard2(stats, "adaptive", statsOpts) },
+      { name: "stats2-dark.svg", content: generateStatsCard2(stats, "dark", statsOpts) },
+      { name: "stats2-light.svg", content: generateStatsCard2(stats, "light", statsOpts) },
+      { name: "contributions.svg", content: generateContributionsCard(stats, theme, contribOpts) },
+      { name: "contributions-adaptive.svg", content: generateContributionsCard(stats, "adaptive", contribOpts) },
+      { name: "contributions-dark.svg", content: generateContributionsCard(stats, "dark", contribOpts) },
+      { name: "contributions-light.svg", content: generateContributionsCard(stats, "light", contribOpts) },
+      { name: "languages.svg", content: generateLanguagesCard(stats, theme, langOpts) },
+      { name: "languages-adaptive.svg", content: generateLanguagesCard(stats, "adaptive", langOpts) },
+      { name: "languages-dark.svg", content: generateLanguagesCard(stats, "dark", langOpts) },
+      { name: "languages-light.svg", content: generateLanguagesCard(stats, "light", langOpts) }
     ];
     for (const { name, content } of outputs) {
       const filePath = path.join(outputDir, name);

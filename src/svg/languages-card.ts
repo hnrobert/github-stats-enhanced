@@ -1,19 +1,15 @@
 import type { GitHubStats } from "../github-api.ts";
-import { getColors, getCardStyle, getLangColor, escapeXml, type Theme, FONT } from "./utils.ts";
+import { getColors, getCardStyle, svgOpen, getLangColor, escapeXml, type Theme, type CardOptions, FONT } from "./utils.ts";
 
-// Matches homepage LanguagesCard:
-// - Title centered
-// - Composite color bar (languages-bar-container, h=12, rounded)
-// - Legend items: dot + name + percentage, flex-wrap rows
-export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adaptive"): string {
+export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
   const langs = stats.stats.languageStats.slice(0, 8);
-  const W = 500;
+  const W = opts.width ?? 500;
   const padX = 28;
   const innerW = W - padX * 2;
 
   if (langs.length === 0) {
-    return `<svg width="${W}" height="100" viewBox="0 0 ${W} 100" xmlns="http://www.w3.org/2000/svg">
+    return `${svgOpen(W, 100, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>
@@ -107,7 +103,7 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
 
   const H = legendStartY + rows.length * (itemH + rowGap) - rowGap + 20;
 
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `${svgOpen(W, H, opts.responsive)}
   ${getCardStyle(theme)}
   <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   <g class="title">
