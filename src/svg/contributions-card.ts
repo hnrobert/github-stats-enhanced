@@ -1,66 +1,85 @@
 import type { GitHubStats } from "../github-api.ts";
 import { getColors, getAdaptiveStyle, formatNumber, escapeXml, type Theme, FONT } from "./utils.ts";
 
-// Matches homepage ContributionsCard (stat-box stat-box-wide)
-// Left half: Total Commits (stat-item centered)
-// Right half: "Contributions Last Year" title + 2x2 grid (commits/prs/issues/reviews)
+// Matches homepage stat-box-wide layout:
+// Left half: stat-item (number + label, vertically centered)
+// Right half: contributions-detail (title + 2x2 grid)
+// No divider — CSS grid handles the split
 export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive"): string {
   const c = getColors(theme);
   const { yearlyContributions: yc, totalCommits } = stats.stats;
 
   const W = 460; const H = 180;
-  const divX = W / 2;
-  const pad = 24;
+  const halfW = W / 2;
 
-  // Left: Total Commits centered
-  const leftCX = divX / 2;
+  // Left: Total Commits — vertically centered
+  const leftCX = halfW / 2;
+  const numFontSize = 28;
+  const labelFontSize = 13;
+  const numCapH = numFontSize * 0.72;
+  const labelCapH = labelFontSize * 0.72;
+  const groupH = numCapH + 10 + labelCapH;
+  const groupTop = H / 2 - groupH / 2;
+  const numY = groupTop + numCapH;
+  const labelY = numY + 10 + labelCapH;
+
   const leftSection = `
-    <text x="${leftCX}" y="${H / 2 - 12}" fill="${c.accentBlue}" font-size="29" font-weight="700"
+    <text x="${leftCX}" y="${numY}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
       text-anchor="middle" font-family="${FONT}">${formatNumber(totalCommits)}</text>
-    <text x="${leftCX}" y="${H / 2 + 12}" fill="${c.textSecondary}" font-size="13" font-weight="500"
+    <text x="${leftCX}" y="${labelY}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">Total Commits</text>`;
 
-  // Right: title + 2x2 grid
-  const rightX = divX + pad;
-  const rightW = W - divX - pad;
-  const titleY = 38;
-  const gridStartY = 62;
-  const cellW = rightW / 2;
-  const cellH = (H - gridStartY - pad) / 2;
+  // Right: title + 2x2 grid — all centered within right half
+  const rightCX = halfW + halfW / 2;
+  const titleFontSize = 14;
+  const titleCapH = titleFontSize * 0.72;
+
+  // Grid layout: title at top, then 2 rows × 2 cols
+  const gridNumFontSize = 19;
+  const gridLabelFontSize = 11;
+  const gridNumCapH = gridNumFontSize * 0.72;
+  const gridLabelCapH = gridLabelFontSize * 0.72;
+  const gridItemH = gridNumCapH + 6 + gridLabelCapH;
+
+  const titleToGrid = 14;
+  const rowGap = 12;
+  const totalRightH = titleCapH + titleToGrid + gridItemH + rowGap + gridItemH;
+  const rightGroupTop = H / 2 - totalRightH / 2;
+
+  const titleY2 = rightGroupTop + titleCapH;
+  const gridStartY = titleY2 + titleToGrid;
 
   const breakdown = [
-    { label: "Commits",  value: formatNumber(yc.commits) },
-    { label: "PRs",      value: formatNumber(yc.pullRequests) },
-    { label: "Issues",   value: formatNumber(yc.issues) },
-    { label: "Reviews",  value: formatNumber(yc.reviews) },
+    { label: "Commits", value: formatNumber(yc.commits) },
+    { label: "PRs",     value: formatNumber(yc.pullRequests) },
+    { label: "Issues",  value: formatNumber(yc.issues) },
+    { label: "Reviews", value: formatNumber(yc.reviews) },
   ];
 
+  const cellW = halfW / 2;
   const gridCells = breakdown.map((item, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    const cx = rightX + col * cellW + cellW / 2;
-    const cy = gridStartY + row * cellH + cellH / 2;
+    const cx = halfW + col * cellW + cellW / 2;
+    const rowTop = gridStartY + row * (gridItemH + rowGap);
+    const nY = rowTop + gridNumCapH;
+    const lY = nY + 6 + gridLabelCapH;
     return `
-    <text x="${cx}" y="${cy - 6}" fill="${c.accentBlue}" font-size="19" font-weight="600"
+    <text x="${cx}" y="${nY}" fill="${c.accentBlue}" font-size="${gridNumFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">${item.value}</text>
-    <text x="${cx}" y="${cy + 12}" fill="${c.textSecondary}" font-size="11"
+    <text x="${cx}" y="${lY}" fill="${c.textSecondary}" font-size="${gridLabelFontSize}"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
   }).join("");
 
   const rightSection = `
-    <text x="${rightX + rightW / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="14" font-weight="600"
+    <text x="${rightCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
     ${gridCells}`;
-
-  // Divider
-  const divider = `<line x1="${divX}" y1="${pad}" x2="${divX}" y2="${H - pad}"
-    stroke="${c.border}" stroke-width="1"/>`;
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   ${getAdaptiveStyle(theme)}
   <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${leftSection}
-  ${divider}
   ${rightSection}
 </svg>`;
 }

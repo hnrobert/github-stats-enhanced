@@ -160,7 +160,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 
 // src/github-api.ts
-var GRAPHQL_QUERY = `
+var CONTRIBUTIONS_QUERY = `
   query($username: String!, $from: DateTime!) {
     user(login: $username) {
       createdAt
@@ -190,8 +190,16 @@ var GRAPHQL_QUERY = `
           contributions(first: 1) { totalCount }
         }
       }
-      ownRepositories: repositories(first: 100, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false) {
+    }
+  }
+`;
+var REPOS_PAGE_QUERY = `
+  query($username: String!, $after: String) {
+    user(login: $username) {
+      repositories(first: 100, orderBy: {field: STARGAZERS, direction: DESC}, isFork: false, after: $after) {
+        pageInfo { hasNextPage endCursor }
         nodes {
+          name
           stargazerCount
           forkCount
           owner { login }
@@ -219,6 +227,17 @@ async function graphql(token, query, variables) {
   if (data.errors)
     throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
   return data.data;
+}
+async function fetchAllRepos(token, username) {
+  const repos = [];
+  let cursor = null;
+  do {
+    const page = await graphql(token, REPOS_PAGE_QUERY, { username, after: cursor });
+    const repoPage = page.user.repositories;
+    repos.push(...repoPage.nodes);
+    cursor = repoPage.pageInfo.hasNextPage ? repoPage.pageInfo.endCursor : null;
+  } while (cursor);
+  return repos;
 }
 async function fetchYearCommits(token, username, year, excludeRepos) {
   const yearStart = new Date(`${year}-01-01T00:00:00Z`).toISOString();
@@ -258,12 +277,11 @@ async function fetchGitHubStats(token, username, options = {}) {
   const userData = await userRes.json();
   const oneYearAgo = new Date;
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  const data = await graphql(token, GRAPHQL_QUERY, {
-    username,
-    from: oneYearAgo.toISOString()
-  });
+  const [data, ownRepos] = await Promise.all([
+    graphql(token, CONTRIBUTIONS_QUERY, { username, from: oneYearAgo.toISOString() }),
+    fetchAllRepos(token, username)
+  ]);
   const gqlUser = data.user;
-  const ownRepos = gqlUser.ownRepositories.nodes;
   const lastYear = gqlUser.lastYearContributions;
   const createdYear = new Date(gqlUser.createdAt).getFullYear();
   const currentYear = new Date().getFullYear();
@@ -275,6 +293,9 @@ async function fetchGitHubStats(token, username, options = {}) {
   const totalForks = ownRepos.reduce((s, r) => s + (r.forkCount ?? 0), 0);
   const langMap = new Map;
   for (const repo of ownRepos) {
+    const repoName = `${repo.owner?.login}/${repo.name}`;
+    if (excludeRepos.has(repoName))
+      continue;
     for (const edge of repo.languages?.edges ?? []) {
       const lang = edge.node.name;
       if (!excludeLanguages.has(lang)) {
@@ -282,15 +303,15 @@ async function fetchGitHubStats(token, username, options = {}) {
       }
     }
   }
-  for (const contrib of lastYear.commitContributionsByRepository ?? []) {
-    const repoName = `${contrib.repository?.owner?.login}/${contrib.repository?.name}`;
+  for (const cr of lastYear.commitContributionsByRepository ?? []) {
+    const repoName = `${cr.repository?.owner?.login}/${cr.repository?.name}`;
     if (excludeRepos.has(repoName))
       continue;
-    const commits = contrib.contributions?.totalCount ?? 0;
+    const commits = cr.contributions?.totalCount ?? 0;
     if (commits === 0)
       continue;
     const weight = Math.min(commits / 100, 0.8);
-    for (const edge of contrib.repository?.languages?.edges ?? []) {
+    for (const edge of cr.repository?.languages?.edges ?? []) {
       const lang = edge.node.name;
       if (!excludeLanguages.has(lang)) {
         langMap.set(lang, (langMap.get(lang) ?? 0) + edge.size * weight);
@@ -303,6 +324,21 @@ async function fetchGitHubStats(token, username, options = {}) {
     count,
     percentage: totalLangSize > 0 ? Math.round(count / totalLangSize * 1e4) / 100 : 0
   })).sort((a, b) => b.count - a.count).slice(0, 8);
+  const repos = ownRepos.filter((r) => !excludeRepos.has(`${r.owner?.login}/${r.name}`)).map((r) => {
+    const edges = r.languages?.edges ?? [];
+    const repoTotal = edges.reduce((s, e) => s + e.size, 0);
+    return {
+      name: r.name ?? "",
+      owner: r.owner?.login ?? username,
+      stars: r.stargazerCount ?? 0,
+      forks: r.forkCount ?? 0,
+      languages: edges.filter((e) => !excludeLanguages.has(e.node.name)).map((e) => ({
+        name: e.node.name,
+        size: e.size,
+        percentage: repoTotal > 0 ? Math.round(e.size / repoTotal * 1000) / 10 : 0
+      }))
+    };
+  }).sort((a, b) => b.stars - a.stars);
   return {
     user: {
       login: userData.login,
@@ -330,7 +366,8 @@ async function fetchGitHubStats(token, username, options = {}) {
         reviews: lastYear.totalPullRequestReviewContributions ?? 0,
         weeks: lastYear.contributionCalendar?.weeks ?? []
       }
-    }
+    },
+    repos
   };
 }
 
@@ -412,10 +449,6 @@ function escapeXml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 function formatNumber(n) {
-  if (n >= 1e6)
-    return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1000)
-    return `${(n / 1000).toFixed(1)}k`;
   return n.toLocaleString();
 }
 var FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
@@ -429,18 +462,33 @@ function octiconAt(name, color, x, y, size = 16) {
   const inner = raw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, "");
   return `<g transform="translate(${x},${y})" fill="${color}">${inner}</g>`;
 }
+function estimateWidth(text, fontSize) {
+  return text.length * fontSize * 0.6;
+}
 function statBox(items, c, W, H) {
   const iconSize = 16;
-  const itemH = H / items.length;
+  const iconGap = 7;
+  const numFontSize = 28;
+  const labelFontSize = 13;
+  const numLabelGap = 10;
+  const numCapH = numFontSize * 0.72;
+  const labelCapH = labelFontSize * 0.72;
+  const groupH = numCapH + numLabelGap + labelCapH;
   return items.map((item, i) => {
-    const cy = i * itemH + itemH / 2;
-    const iconX = W / 2 - iconSize / 2;
-    const iconY = cy - 46;
+    const cy = (i + 0.5) * (H / items.length);
+    const groupTop = cy - groupH / 2;
+    const numBaseline = groupTop + numCapH;
+    const labelBaseline = numBaseline + numLabelGap + labelCapH;
+    const iconTop = groupTop + (numCapH - iconSize) / 2;
+    const numW = estimateWidth(item.number, numFontSize);
+    const groupW = iconSize + iconGap + numW;
+    const iconX = W / 2 - groupW / 2;
+    const numX = iconX + iconSize + iconGap;
     return `
-    ${octiconAt(item.icon, item.iconColor, iconX, iconY, iconSize)}
-    <text x="${W / 2}" y="${cy - 8}" fill="${c.accentBlue}" font-size="29" font-weight="700"
-      text-anchor="middle" font-family="${FONT}">${item.number}</text>
-    <text x="${W / 2}" y="${cy + 14}" fill="${c.textSecondary}" font-size="13" font-weight="500"
+    ${octiconAt(item.icon, c.textSecondary, iconX, iconTop, iconSize)}
+    <text x="${numX}" y="${numBaseline}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
+      text-anchor="start" font-family="${FONT}">${item.number}</text>
+    <text x="${W / 2}" y="${labelBaseline}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
   }).join("");
 }
@@ -449,8 +497,8 @@ function generateStatsCard1(stats, theme = "adaptive") {
   const W = 220;
   const H = 200;
   const items = [
-    { number: formatNumber(stats.user.followers), label: "Followers", icon: "people", iconColor: c.textSecondary },
-    { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star", iconColor: c.textSecondary }
+    { number: formatNumber(stats.user.followers), label: "Followers", icon: "people" },
+    { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" }
   ];
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   ${getAdaptiveStyle(theme)}
@@ -463,8 +511,8 @@ function generateStatsCard2(stats, theme = "adaptive") {
   const W = 220;
   const H = 200;
   const items = [
-    { number: formatNumber(stats.user.public_repos), label: "Public Repos", icon: "repo", iconColor: c.textSecondary },
-    { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request", iconColor: c.textSecondary }
+    { number: formatNumber(stats.user.public_repos), label: "Public Repos", icon: "repo" },
+    { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" }
   ];
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   ${getAdaptiveStyle(theme)}
@@ -488,12 +536,14 @@ function generateLanguagesCard(stats, theme = "adaptive") {
 </svg>`;
   }
   const titleY = 36;
+  const totalPct = langs.reduce((s, l) => s + l.percentage, 0);
   const barY = 54;
   const barH = 12;
   let barCursor = padX;
   const barSegments = langs.map((lang) => {
     const color = getLangColor(lang.language);
-    const segW = Math.max(2, Math.round(lang.percentage / 100 * innerW));
+    const normalizedPct = totalPct > 0 ? lang.percentage / totalPct * 100 : 0;
+    const segW = Math.max(2, Math.round(normalizedPct / 100 * innerW));
     const seg = `<rect x="${barCursor}" y="${barY}" width="${segW}" height="${barH}" fill="${color}"/>`;
     barCursor += segW;
     return seg;
@@ -570,48 +620,63 @@ function generateContributionsCard(stats, theme = "adaptive") {
   const { yearlyContributions: yc, totalCommits } = stats.stats;
   const W = 460;
   const H = 180;
-  const divX = W / 2;
-  const pad = 24;
-  const leftCX = divX / 2;
+  const halfW = W / 2;
+  const leftCX = halfW / 2;
+  const numFontSize = 28;
+  const labelFontSize = 13;
+  const numCapH = numFontSize * 0.72;
+  const labelCapH = labelFontSize * 0.72;
+  const groupH = numCapH + 10 + labelCapH;
+  const groupTop = H / 2 - groupH / 2;
+  const numY = groupTop + numCapH;
+  const labelY = numY + 10 + labelCapH;
   const leftSection = `
-    <text x="${leftCX}" y="${H / 2 - 12}" fill="${c.accentBlue}" font-size="29" font-weight="700"
+    <text x="${leftCX}" y="${numY}" fill="${c.accentBlue}" font-size="${numFontSize}" font-weight="700"
       text-anchor="middle" font-family="${FONT}">${formatNumber(totalCommits)}</text>
-    <text x="${leftCX}" y="${H / 2 + 12}" fill="${c.textSecondary}" font-size="13" font-weight="500"
+    <text x="${leftCX}" y="${labelY}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">Total Commits</text>`;
-  const rightX = divX + pad;
-  const rightW = W - divX - pad;
-  const titleY = 38;
-  const gridStartY = 62;
-  const cellW = rightW / 2;
-  const cellH = (H - gridStartY - pad) / 2;
+  const rightCX = halfW + halfW / 2;
+  const titleFontSize = 14;
+  const titleCapH = titleFontSize * 0.72;
+  const gridNumFontSize = 19;
+  const gridLabelFontSize = 11;
+  const gridNumCapH = gridNumFontSize * 0.72;
+  const gridLabelCapH = gridLabelFontSize * 0.72;
+  const gridItemH = gridNumCapH + 6 + gridLabelCapH;
+  const titleToGrid = 14;
+  const rowGap = 12;
+  const totalRightH = titleCapH + titleToGrid + gridItemH + rowGap + gridItemH;
+  const rightGroupTop = H / 2 - totalRightH / 2;
+  const titleY2 = rightGroupTop + titleCapH;
+  const gridStartY = titleY2 + titleToGrid;
   const breakdown = [
     { label: "Commits", value: formatNumber(yc.commits) },
     { label: "PRs", value: formatNumber(yc.pullRequests) },
     { label: "Issues", value: formatNumber(yc.issues) },
     { label: "Reviews", value: formatNumber(yc.reviews) }
   ];
+  const cellW = halfW / 2;
   const gridCells = breakdown.map((item, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    const cx = rightX + col * cellW + cellW / 2;
-    const cy = gridStartY + row * cellH + cellH / 2;
+    const cx = halfW + col * cellW + cellW / 2;
+    const rowTop = gridStartY + row * (gridItemH + rowGap);
+    const nY = rowTop + gridNumCapH;
+    const lY = nY + 6 + gridLabelCapH;
     return `
-    <text x="${cx}" y="${cy - 6}" fill="${c.accentBlue}" font-size="19" font-weight="600"
+    <text x="${cx}" y="${nY}" fill="${c.accentBlue}" font-size="${gridNumFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">${item.value}</text>
-    <text x="${cx}" y="${cy + 12}" fill="${c.textSecondary}" font-size="11"
+    <text x="${cx}" y="${lY}" fill="${c.textSecondary}" font-size="${gridLabelFontSize}"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>`;
   }).join("");
   const rightSection = `
-    <text x="${rightX + rightW / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="14" font-weight="600"
+    <text x="${rightCX}" y="${titleY2}" fill="${c.textPrimary}" font-size="${titleFontSize}" font-weight="600"
       text-anchor="middle" font-family="${FONT}">Contributions Last Year</text>
     ${gridCells}`;
-  const divider = `<line x1="${divX}" y1="${pad}" x2="${divX}" y2="${H - pad}"
-    stroke="${c.border}" stroke-width="1"/>`;
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   ${getAdaptiveStyle(theme)}
   <rect width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${leftSection}
-  ${divider}
   ${rightSection}
 </svg>`;
 }

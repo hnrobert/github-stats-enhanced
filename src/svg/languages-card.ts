@@ -23,13 +23,17 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
   // Title
   const titleY = 36;
 
+  // Normalize percentages to fill 100% of bar width (same as homepage normalizedPercentage)
+  const totalPct = langs.reduce((s, l) => s + l.percentage, 0);
+
   // Color bar (y=54, h=12, rounded)
   const barY = 54;
   const barH = 12;
   let barCursor = padX;
   const barSegments = langs.map((lang) => {
     const color = getLangColor(lang.language);
-    const segW = Math.max(2, Math.round((lang.percentage / 100) * innerW));
+    const normalizedPct = totalPct > 0 ? (lang.percentage / totalPct) * 100 : 0;
+    const segW = Math.max(2, Math.round((normalizedPct / 100) * innerW));
     const seg = `<rect x="${barCursor}" y="${barY}" width="${segW}" height="${barH}" fill="${color}"/>`;
     barCursor += segW;
     return seg;
