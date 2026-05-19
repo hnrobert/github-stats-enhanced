@@ -64,7 +64,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@main
 
       - name: Generate GitHub Stats SVGs
         uses: hnrobert/github-stats-enhanced@main
@@ -79,7 +79,7 @@ jobs:
           # exclude_repos: "your-username/some-private-repo"
 
       - name: Deploy to output branch
-        uses: crazy-max/ghaction-github-pages@v4
+        uses: crazy-max/ghaction-github-pages@main
         with:
           target_branch: output
           build_dir: dist
