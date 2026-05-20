@@ -61,7 +61,7 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
         generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
           generateReport(langFiltered, outputDir);
-          generateDemo(langFiltered);
+          generateDemo(langFiltered, outputDir);
         }
         log(`\nREADME usage (adaptive theme):`);
         log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats1-adaptive.svg)`);

@@ -5,6 +5,14 @@
 
 A GitHub Action that generates beautiful SVG stat cards for your GitHub profile README — stats card, language distribution, and contribution heatmap.
 
+<div align="center" style="max-width:800px;margin:0 auto">
+<a href="https://github.com/hnrobert/hnrobert/tree/github-stats-enhanced"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-dark.svg" /><img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-light.svg" width="22%" alt="Stats 1" hspace="4" /></picture></a><a href="https://github.com/hnrobert/hnrobert/tree/github-stats-enhanced"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-dark.svg" /><img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-light.svg" width="22%" alt="Stats 2" hspace="4" /></picture></a><a href="https://github.com/hnrobert/hnrobert/tree/github-stats-enhanced"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-dark.svg" /><img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-light.svg" width="51%" alt="Contributions" hspace="4" /></picture></a>
+
+<br/>
+
+<a href="https://github.com/hnrobert/hnrobert/tree/github-stats-enhanced"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-dark.svg" /><img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-light.svg" width="97%" alt="Languages" /></picture></a>
+</div>
+
 ## Cards
 
 Each card is generated in three variants: `adaptive`, `dark`, and `light`.

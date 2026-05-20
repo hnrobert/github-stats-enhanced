@@ -7,6 +7,7 @@
         "svgs"
     ],
     "markdownlint.config": {
-        "no-emphasis-as-heading": false
+        "no-emphasis-as-heading": false,
+        "no-inline-html": false
     }
 }

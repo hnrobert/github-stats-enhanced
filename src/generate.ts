@@ -104,8 +104,8 @@ export function generateReport(stats: GitHubStats, outputDir: string): void {
   log(`- ${filePath}`);
 }
 
-export function generateDemo(stats: GitHubStats, rootDir: string = "."): void {
-  const filePath = path.join(rootDir, "index.html");
+export function generateDemo(stats: GitHubStats, outputDir: string = "."): void {
+  const filePath = path.join(outputDir, "index.html");
   const displayName = stats.user.name ?? stats.user.login;
   fs.writeFileSync(filePath, buildDemo(stats.user.login, displayName), "utf-8");
   log(`- ${filePath}`);

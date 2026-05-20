@@ -13,7 +13,9 @@ export function buildReport(stats: GitHubStats): string {
   const lines: string[] = [
     `# GitHub Stats Report — ${u.login}`,
     ``,
-    `> Generated: ${now}`,
+    `> Generated: ${now}  `,
+    `> Profile: [github.com/${u.login}](https://github.com/${u.login})  `,
+    `> Powered by [github-stats-enhanced](https://github.com/hnrobert/github-stats-enhanced)`,
     ``,
     `## Summary`,
     ``,
