@@ -1,9 +1,17 @@
 import type { GitHubStats } from "./api/types.ts";
 
-export function buildReport(stats: GitHubStats): string {
+export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): string {
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   const u  = stats.user;
   const st = stats.stats;
+  const base = baseUrl;
+  const tree = treeUrl;
+
+  const card = (dark: string, light: string, width: string, alt: string, hspace?: string) =>
+    `<a href="${tree}"><picture>` +
+    `<source media="(prefers-color-scheme: dark)" srcset="${base}/${dark}" />` +
+    `<img src="${base}/${light}" width="${width}" alt="${alt}"${hspace ? ` hspace="${hspace}"` : ""} />` +
+    `</picture></a>`;
 
   const bar = (pct: number, width = 20) => {
     const filled = Math.round((pct / 100) * width);
@@ -16,6 +24,16 @@ export function buildReport(stats: GitHubStats): string {
     `> Generated: ${now}  `,
     `> Profile: [@${u.login}](https://github.com/${u.login})  `,
     `> Powered by [@hnrobert/github-stats-enhanced](https://github.com/hnrobert/github-stats-enhanced)`,
+    ``,
+    `<div align="center" style="max-width:800px;margin:0 auto">`,
+    card("stats1-dark.svg", "stats1-light.svg", "22%", "Stats 1", "4") +
+    card("stats2-dark.svg", "stats2-light.svg", "22%", "Stats 2", "4") +
+    card("contributions-dark.svg", "contributions-light.svg", "51%", "Contributions", "4"),
+    ``,
+    `<br/>`,
+    ``,
+    card("languages-dark.svg", "languages-light.svg", "97%", "Languages"),
+    `</div>`,
     ``,
     `## Summary`,
     ``,

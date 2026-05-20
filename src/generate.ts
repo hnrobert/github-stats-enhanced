@@ -98,9 +98,16 @@ export function generateSvgs(
   log(`\n${outputs.length} svg files generated in ./${outputDir}/`);
 }
 
-export function generateReport(stats: GitHubStats, outputDir: string): void {
+export function generateReport(stats: GitHubStats, outputDir: string, targetRepo?: string, targetBranch?: string): void {
   const filePath = path.join(outputDir, "README.md");
-  fs.writeFileSync(filePath, buildReport(stats), "utf-8");
+  const u = stats.user;
+  const baseUrl = targetRepo && targetBranch
+    ? `https://raw.githubusercontent.com/${u.login}/${targetRepo}/${targetBranch}`
+    : ".";
+  const treeUrl = targetRepo && targetBranch
+    ? `https://github.com/${u.login}/${targetRepo}/tree/${targetBranch}`
+    : ".";
+  fs.writeFileSync(filePath, buildReport(stats, baseUrl, treeUrl), "utf-8");
   log(`- ${filePath}`);
 }
 

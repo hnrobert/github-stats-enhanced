@@ -60,7 +60,7 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
         const contribFiltered = filterContributionStats(stats, contribFilter);
         generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
-          generateReport(langFiltered, outputDir);
+          generateReport(langFiltered, outputDir, targetRepo, targetBranch);
           generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
         log(`\nREADME usage (adaptive theme):`);
@@ -76,10 +76,12 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
       const { langFilter, contribFilter } = readFilterOptions();
       const langFiltered    = filterLanguageStats(raw, langFilter);
       const contribFiltered = filterContributionStats(raw, contribFilter);
+      const genRepo   = getInput("target_repo") || process.env.GITHUB_REPOSITORY_NAME || raw.user.login;
+      const genBranch = getInput("target_branch") || "github-stats-enhanced";
       generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
       if (withReport) {
-        generateReport(langFiltered, outputDir);
-        generateDemo(langFiltered);
+        generateReport(langFiltered, outputDir, genRepo, genBranch);
+        generateDemo(langFiltered, outputDir, genRepo, genBranch);
       }
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);
