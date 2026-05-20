@@ -3138,9 +3138,9 @@ function getCardStyle(theme) {
   const l = THEMES.light;
   const d = THEMES.dark;
   const themeBlock = theme === "adaptive" ? `
-    :root{--s-bg:${l.bg};--s-bd:${l.border};--s-tp:${l.textPrimary};
+    svg{--s-bg:${l.bg};--s-bd:${l.border};--s-tp:${l.textPrimary};
       --s-ts:${l.textSecondary};--s-ac:${l.accentBlue};--s-pb:${l.progressBg};}
-    @media(prefers-color-scheme:dark){:root{
+    @media(prefers-color-scheme:dark){svg{
       --s-bg:${d.bg};--s-bd:${d.border};--s-tp:${d.textPrimary};
       --s-ts:${d.textSecondary};--s-ac:${d.accentBlue};--s-pb:${d.progressBg};}}` : "";
   const ease = "cubic-bezier(.33,1,.68,1)";
@@ -3455,10 +3455,13 @@ function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
 }
 
 // src/report.ts
-function buildReport(stats) {
+function buildReport(stats, baseUrl = ".", treeUrl = ".") {
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   const u = stats.user;
   const st = stats.stats;
+  const base = baseUrl;
+  const tree = treeUrl;
+  const card = (dark, light, width, alt, hspace) => `<a href="${tree}"><picture>` + `<source media="(prefers-color-scheme: dark)" srcset="${base}/${dark}" />` + `<img src="${base}/${light}" width="${width}" alt="${alt}"${hspace ? ` hspace="${hspace}"` : ""} />` + `</picture></a>`;
   const bar = (pct, width = 20) => {
     const filled = Math.round(pct / 100 * width);
     return "█".repeat(filled) + "░".repeat(width - filled);
@@ -3466,7 +3469,17 @@ function buildReport(stats) {
   const lines = [
     `# GitHub Stats Report — ${u.login}`,
     ``,
-    `> Generated: ${now}`,
+    `> Generated: ${now}  `,
+    `> Profile: [@${u.login}](https://github.com/${u.login})  `,
+    `> Powered by [@hnrobert/github-stats-enhanced](https://github.com/hnrobert/github-stats-enhanced)`,
+    ``,
+    `<div align="center" style="max-width:800px;margin:0 auto">`,
+    card("stats1-dark.svg", "stats1-light.svg", "22%", "Stats 1", "4") + card("stats2-dark.svg", "stats2-light.svg", "22%", "Stats 2", "4") + card("contributions-dark.svg", "contributions-light.svg", "51%", "Contributions", "4"),
+    ``,
+    `<br/>`,
+    ``,
+    card("languages-dark.svg", "languages-light.svg", "97%", "Languages"),
+    `</div>`,
     ``,
     `## Summary`,
     ``,
@@ -3549,23 +3562,56 @@ var github_stats_enhanced_default = `<!DOCTYPE html>
       }
     }
 
+    html[data-theme="dark"] {
+      --bg: #0f172a;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f1f5f9;
+      --border: rgba(0, 0, 0, 0.08);
+      --text: #1e293b;
+      --muted: #64748b;
+      --accent: #3b82f6;
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       padding: 2rem 1.5rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.25rem;
     }
 
     h1 {
       font-size: 1.5rem;
       font-weight: 700;
-      margin-bottom: 0.25rem;
+    }
+
+    .gh-link {
+      font-size: 0.85rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .gh-link:hover {
+      text-decoration: underline;
     }
 
     .subtitle {
       color: var(--muted);
       font-size: 0.9rem;
-      margin-bottom: 3rem;
+      margin-bottom: 2rem;
     }
 
     h2 {
@@ -3593,10 +3639,39 @@ var github_stats_enhanced_default = `<!DOCTYPE html>
       vertical-align: middle;
     }
 
+    .theme-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .theme-btn {
+      padding: 0.3rem 0.85rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .theme-btn:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .theme-btn.active {
+      background: rgba(96, 165, 250, 0.15);
+      color: var(--accent);
+      border-color: rgba(96, 165, 250, 0.4);
+    }
+
     .stats-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 2fr;
+      grid-template-columns: 110fr 110fr 256fr;
       gap: 1.25rem;
+      align-items: end;
     }
 
     @media (max-width: 640px) {
@@ -3634,34 +3709,69 @@ var github_stats_enhanced_default = `<!DOCTYPE html>
 </head>
 
 <body>
-  <h1>GitHub Stats — Robert He</h1>
-  <p class="subtitle">Drag the right edge to see responsive scaling</p>
+  <div class="header">
+    <h1>GitHub Stats — Robert He</h1>
+    <a class="gh-link" href="https://github.com/hnrobert" target="_blank">@hnrobert ↗</a>
+    <a class="gh-link" href="https://github.com/hnrobert/github-stats-enhanced" target="_blank">@hnrobert/github-stats-enhanced ↗</a>
+  </div>
 
-  <h2>Cards <span class="tag">adaptive</span></h2>
+  <div class="theme-toggle">
+    <button class="theme-btn active" data-theme="auto" onclick="setTheme('auto')">Auto</button>
+    <button class="theme-btn" data-theme="light" onclick="setTheme('light')">Light</button>
+    <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')">Dark</button>
+  </div>
+
+  <h2>Cards</h2>
   <p class="desc">Auto dark / light theme, scales with container width.</p>
   <div class="resizable">
-    <p class="resize-hint">↔ drag right edge to resize</p>
     <div class="stats-grid">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-adaptive.svg"
-        alt="Stats 1">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-adaptive.svg"
-        alt="Stats 2">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-adaptive.svg"
-        alt="Contributions">
+      <picture>
+        <source class="dark-src" media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-dark.svg">
+        <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats1-light.svg" alt="Stats 1">
+      </picture>
+      <picture>
+        <source class="dark-src" media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-dark.svg">
+        <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/stats2-light.svg" alt="Stats 2">
+      </picture>
+      <picture>
+        <source class="dark-src" media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-dark.svg">
+        <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/contributions-light.svg" alt="Contributions">
+      </picture>
     </div>
     <div class="spacer">
-      <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-adaptive.svg"
-        alt="Languages">
+      <picture>
+        <source class="dark-src" media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-dark.svg">
+        <img src="https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced/languages-light.svg" alt="Languages">
+      </picture>
     </div>
   </div>
+
+  <script>
+    function setTheme(theme) {
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+      const sources = document.querySelectorAll('picture source.dark-src');
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        sources.forEach(s => s.media = 'all');
+      } else if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        sources.forEach(s => s.media = 'not all');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        sources.forEach(s => s.media = '(prefers-color-scheme: dark)');
+      }
+      sources.forEach(s => { const m = s.media; s.media = ''; s.media = m; });
+    }
+  </script>
 </body>
 
-</html>`;
+</html>
+`;
 
 // src/demo.ts
 var template = github_stats_enhanced_default;
-function buildDemo(username, displayName) {
-  return template.replaceAll("hnrobert", username).replaceAll("Robert He", displayName);
+function buildDemo(username, displayName, targetRepo, targetBranch) {
+  return template.replaceAll("Robert He", displayName).replaceAll(`"https://github.com/hnrobert"`, `"https://github.com/${username}"`).replaceAll(`>@hnrobert ↗<`, `>@${username} ↗<`).replaceAll(`hnrobert/hnrobert/github-stats-enhanced`, `${username}/${targetRepo}/${targetBranch}`);
 }
 
 // src/action/logger.ts
@@ -3743,15 +3853,18 @@ function generateSvgs(langStats, contribStats, outputDir, theme, statsOpts, cont
   log(`
 ${outputs.length} svg files generated in ./${outputDir}/`);
 }
-function generateReport(stats, outputDir) {
+function generateReport(stats, outputDir, targetRepo, targetBranch) {
   const filePath = path.join(outputDir, "README.md");
-  fs.writeFileSync(filePath, buildReport(stats), "utf-8");
+  const u = stats.user;
+  const baseUrl = targetRepo && targetBranch ? `https://raw.githubusercontent.com/${u.login}/${targetRepo}/${targetBranch}` : ".";
+  const treeUrl = targetRepo && targetBranch ? `https://github.com/${u.login}/${targetRepo}/tree/${targetBranch}` : ".";
+  fs.writeFileSync(filePath, buildReport(stats, baseUrl, treeUrl), "utf-8");
   log(`- ${filePath}`);
 }
-function generateDemo(stats, rootDir = ".") {
-  const filePath = path.join(rootDir, "index.html");
+function generateDemo(stats, outputDir = ".", targetRepo = stats.user.login, targetBranch = "github-stats-enhanced") {
+  const filePath = path.join(outputDir, "index.html");
   const displayName = stats.user.name ?? stats.user.login;
-  fs.writeFileSync(filePath, buildDemo(stats.user.login, displayName), "utf-8");
+  fs.writeFileSync(filePath, buildDemo(stats.user.login, displayName, targetRepo, targetBranch), "utf-8");
   log(`- ${filePath}`);
 }
 // src/action/inputs.ts
@@ -3812,7 +3925,7 @@ function readFilterOptions() {
     const { statsOpts, contribOpts, langOpts } = buildCardOpts(getBoolInput("responsive"));
     fs2.mkdirSync(outputDir, { recursive: true });
     if (mode === "fetch" || mode === "all") {
-      const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
+      const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || process.env.GITHUB_REPOSITORY_OWNER || "";
       const token = process.env.SELF_GITHUB_TOKEN || getInput("self_github_token") || process.env.GITHUB_TOKEN || getInput("github_token");
       if (!username)
         throw new Error("github_user_name is required");
@@ -3820,6 +3933,8 @@ function readFilterOptions() {
         throw new Error("GITHUB_TOKEN is required");
       log(`\uD83D\uDCCA Fetching GitHub stats for: ${username}`);
       const weightContributed = getInput("weight_contributed_repos").toLowerCase() !== "false";
+      const targetRepo = getInput("target_repo") || process.env.GITHUB_REPOSITORY_NAME || username;
+      const targetBranch = getInput("target_branch") || "github-stats-enhanced";
       const stats = await fetchGitHubStats(token, username, weightContributed);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
       writeStatsYaml(dataFile, stats);
@@ -3830,15 +3945,15 @@ function readFilterOptions() {
         const contribFiltered = filterContributionStats(stats, contribFilter);
         generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
-          generateReport(langFiltered, outputDir);
-          generateDemo(langFiltered);
+          generateReport(langFiltered, outputDir, targetRepo, targetBranch);
+          generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
         log(`
 README usage (adaptive theme):`);
-        log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats1-adaptive.svg)`);
-        log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats2-adaptive.svg)`);
-        log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/contributions-adaptive.svg)`);
-        log(`  ![Languages](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/languages-adaptive.svg)`);
+        log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats1-adaptive.svg)`);
+        log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats2-adaptive.svg)`);
+        log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/contributions-adaptive.svg)`);
+        log(`  ![Languages](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/languages-adaptive.svg)`);
       }
     } else if (mode === "generate") {
       if (!fs2.existsSync(dataFile))
@@ -3848,10 +3963,12 @@ README usage (adaptive theme):`);
       const { langFilter, contribFilter } = readFilterOptions();
       const langFiltered = filterLanguageStats(raw, langFilter);
       const contribFiltered = filterContributionStats(raw, contribFilter);
+      const genRepo = getInput("target_repo") || process.env.GITHUB_REPOSITORY_NAME || raw.user.login;
+      const genBranch = getInput("target_branch") || "github-stats-enhanced";
       generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
       if (withReport) {
-        generateReport(langFiltered, outputDir);
-        generateDemo(langFiltered);
+        generateReport(langFiltered, outputDir, genRepo, genBranch);
+        generateDemo(langFiltered, outputDir, genRepo, genBranch);
       }
     } else {
       throw new Error(`Unknown mode: "${mode}". Use "fetch", "generate", or "all".`);
