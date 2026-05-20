@@ -185,28 +185,28 @@ with:
 
 ## Inputs
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `github_user_name` | yes | — | GitHub username to generate stats for |
-| `self_github_token` | no | — | Personal access token. Takes priority over `GITHUB_TOKEN`. Use for private repos or org stats. |
-| `github_token` | no | — | Fallback token. The auto-provided `GITHUB_TOKEN` is used if neither token is set. |
-| `mode` | no | `all` | `all` (fetch + generate), `fetch` (API → stats.yml), `generate` (stats.yml → SVGs) |
-| `output_dir` | no | `dist` | Output directory for generated SVGs |
-| `theme` | no | `adaptive` | `adaptive`, `dark`, or `light` |
-| `responsive` | no | `true` | `true` for `width="100%"`, `false` for fixed pixel dimensions |
-| `exclude_languages` | no | — | Comma-separated languages to exclude from the languages card |
-| `exclude_repos` | no | — | Comma-separated `owner/repo` to exclude from language stats |
-| `contrib_exclude_repos` | no | — | Comma-separated `owner/repo` to exclude from contribution stats only |
-| `weight_contributed_repos` | no | `true` | Set to `false` to count contributed repo languages at full weight instead of by commit ratio |
-| `languages_count` | no | `8` | Number of languages to display |
-| `stats_width` | no | `220` | Stats card width (px) |
-| `stats_height` | no | `200` | Stats card height (px) |
-| `contributions_width` | no | `460` | Contributions card width (px) |
-| `contributions_height` | no | `180` | Contributions card height (px) |
-| `languages_width` | no | `500` | Languages card width (px) |
-| `generate_report` | no | `true` | Also write `README.md` (stats report) and `index.html` (demo page) |
-| `target_repo` | no | repo name / username | Repository name where SVGs are stored. Defaults to `GITHUB_REPOSITORY_NAME` env var, then `github_user_name` |
-| `target_branch` | no | `github-stats-enhanced` | Branch where SVGs are pushed and served from |
+| Input | Default | Description |
+|-------|---------|-------------|
+| `github_user_name` | repo owner | GitHub username to generate stats for. Defaults to `GITHUB_REPOSITORY_OWNER` (the Actions repo owner). |
+| `self_github_token` | — | Personal access token. Takes priority over `GITHUB_TOKEN`. Use for private repos or org stats. |
+| `github_token` | — | Fallback token. The auto-provided `GITHUB_TOKEN` is used if neither token is set. |
+| `mode` | `all` | `all` (fetch + generate), `fetch` (API → stats.yml), `generate` (stats.yml → SVGs) |
+| `output_dir` | `dist` | Output directory for generated SVGs |
+| `theme` | `adaptive` | `adaptive`, `dark`, or `light` |
+| `responsive` | `true` | `true` for `width="100%"`, `false` for fixed pixel dimensions |
+| `exclude_languages` | — | Comma-separated languages to exclude from the languages card |
+| `exclude_repos` | — | Comma-separated `owner/repo` to exclude from language stats |
+| `contrib_exclude_repos` | — | Comma-separated `owner/repo` to exclude from contribution stats only |
+| `weight_contributed_repos` | `true` | Set to `false` to count contributed repo languages at full weight instead of by commit ratio |
+| `languages_count` | `8` | Number of languages to display |
+| `stats_width` | `220` | Stats card width (px) |
+| `stats_height` | `200` | Stats card height (px) |
+| `contributions_width` | `460` | Contributions card width (px) |
+| `contributions_height` | `180` | Contributions card height (px) |
+| `languages_width` | `500` | Languages card width (px) |
+| `generate_report` | `true` | Also write `README.md` (stats report) and `index.html` (demo page) |
+| `target_repo` | repo name / username | Repository name where SVGs are stored. Defaults to `GITHUB_REPOSITORY_NAME` env var, then `github_user_name` |
+| `target_branch` | `github-stats-enhanced` | Branch where SVGs are pushed and served from |
 
 ## Local development
 

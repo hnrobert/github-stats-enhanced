@@ -7,8 +7,9 @@ branding:
   color: "blue"
 inputs:
   github_user_name:
-    description: "GitHub username to generate stats for"
-    required: true
+    description: "GitHub username to generate stats for. Defaults to GITHUB_REPOSITORY_OWNER (the repo owner) if not set."
+    required: false
+    default: ""
   self_github_token:
     description: "Personal GitHub token (overrides GITHUB_TOKEN). Use this if the default token lacks permissions for private repos or org data."
     required: false

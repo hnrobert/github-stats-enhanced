@@ -35,7 +35,7 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
     fs.mkdirSync(outputDir, { recursive: true });
 
     if (mode === "fetch" || mode === "all") {
-      const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || "";
+      const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || process.env.GITHUB_REPOSITORY_OWNER || "";
       const token =
         process.env.SELF_GITHUB_TOKEN ||
         getInput("self_github_token")  ||
@@ -61,7 +61,7 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
         generateSvgs(langFiltered, contribFiltered, outputDir, theme, statsOpts, contribOpts, langOpts);
         if (withReport) {
           generateReport(langFiltered, outputDir);
-          generateDemo(langFiltered, outputDir);
+          generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
         log(`\nREADME usage (adaptive theme):`);
         log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats1-adaptive.svg)`);
