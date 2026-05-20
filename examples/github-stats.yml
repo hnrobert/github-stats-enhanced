@@ -8,11 +8,11 @@
 #              then set `self_github_token: ${{ secrets.SELF_GITHUB_TOKEN }}`.
 #              Use this if you want private repo data or org contribution stats.
 #
-# The generated SVGs are pushed to the `github-stats-enhanced` branch:
-#   ![Stats1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats1-adaptive.svg)
-#   ![Stats2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats2-adaptive.svg)
-#   ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/contributions-adaptive.svg)
-#   ![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/languages-adaptive.svg)
+# The generated SVGs are pushed to the branch set by `target_branch` (default: github-stats-enhanced):
+#   ![Stats1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats1-adaptive.svg)
+#   ![Stats2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats2-adaptive.svg)
+#   ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/contributions-adaptive.svg)
+#   ![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive.svg)
 #
 # Pipeline modes:
 #   mode: "all"      — fetch from GitHub API + generate SVGs in one step (default)
@@ -91,6 +91,12 @@ jobs:
           # Weight contributed (non-own) repo languages by your commit ratio
           # Set to "false" to count all languages at full weight
           # weight_contributed_repos: "true"
+
+          # Repository where SVGs are stored (defaults to current repo name, then github_user_name)
+          # target_repo: "your-username"
+
+          # Branch where SVGs are pushed and served from
+          # target_branch: "github-stats-enhanced"
 
       - name: Deploy to github-stats-enhanced branch
         uses: crazy-max/ghaction-github-pages@v5

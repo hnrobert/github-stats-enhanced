@@ -111,6 +111,12 @@ jobs:
           # Set to "false" to count all languages at full weight
           # weight_contributed_repos: "true"
 
+          # Repository where SVGs are stored (defaults to current repo name, then github_user_name)
+          # target_repo: "your-username"
+
+          # Branch where SVGs are pushed and served from
+          # target_branch: "github-stats-enhanced"
+
       - name: Deploy to github-stats-enhanced branch
         uses: crazy-max/ghaction-github-pages@v5
         with:
@@ -126,23 +132,23 @@ jobs:
 **Recommended — adaptive (works in all themes automatically):**
 
 ```markdown
-![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-adaptive.svg)
-![Top Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/languages-adaptive.svg)
-![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/contributions-adaptive.svg)
+![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-adaptive.svg)
+![Top Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive.svg)
+![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/contributions-adaptive.svg)
 ```
 
 **Fixed dark/light variants (if you prefer explicit control):**
 
 ```markdown
-![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-dark.svg)
+![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-dark.svg)
 ```
 
 ```html
 <!-- Manual dark/light switch with <picture> -->
 <picture>
   <source media="(prefers-color-scheme: dark)"
-    srcset="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-dark.svg">
-  <img src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_USERNAME/github-stats-enhanced/stats-light.svg">
+    srcset="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-dark.svg">
+  <img src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-light.svg">
 </picture>
 ```
 
@@ -191,6 +197,8 @@ with:
 | `contributions_height` | no | `180` | Contributions card height (px) |
 | `languages_width` | no | `500` | Languages card width (px) |
 | `generate_report` | no | `true` | Also write `README.md` (stats report) and `index.html` (demo page) |
+| `target_repo` | no | repo name / username | Repository name where SVGs are stored. Defaults to `GITHUB_REPOSITORY_NAME` env var, then `github_user_name` |
+| `target_branch` | no | `github-stats-enhanced` | Branch where SVGs are pushed and served from |
 
 ## Local development
 

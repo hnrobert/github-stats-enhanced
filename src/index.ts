@@ -46,6 +46,8 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
 
       log(`📊 Fetching GitHub stats for: ${username}`);
       const weightContributed = getInput("weight_contributed_repos").toLowerCase() !== "false";
+      const targetRepo   = getInput("target_repo") || process.env.GITHUB_REPOSITORY_NAME || username;
+      const targetBranch = getInput("target_branch") || "github-stats-enhanced";
       const stats = await fetchGitHubStats(token, username, weightContributed);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
 
@@ -62,10 +64,10 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           generateDemo(langFiltered);
         }
         log(`\nREADME usage (adaptive theme):`);
-        log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats1-adaptive.svg)`);
-        log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/stats2-adaptive.svg)`);
-        log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/contributions-adaptive.svg)`);
-        log(`  ![Languages](https://raw.githubusercontent.com/${username}/${username}/github-stats-enhanced/languages-adaptive.svg)`);
+        log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats1-adaptive.svg)`);
+        log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats2-adaptive.svg)`);
+        log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/contributions-adaptive.svg)`);
+        log(`  ![Languages](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/languages-adaptive.svg)`);
       }
     } else if (mode === "generate") {
       if (!fs.existsSync(dataFile)) throw new Error(`data_file not found: ${dataFile}`);

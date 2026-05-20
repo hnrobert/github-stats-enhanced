@@ -81,6 +81,14 @@ inputs:
     description: "Generate README.md (stats report) and index.html (demo page) alongside SVGs"
     required: false
     default: "true"
+  target_repo:
+    description: "Repository name where SVGs are stored (defaults to GITHUB_REPOSITORY_NAME env var, then github_user_name)"
+    required: false
+    default: ""
+  target_branch:
+    description: "Branch name where SVGs are stored"
+    required: false
+    default: "github-stats-enhanced"
 
 runs:
   using: "node24"
