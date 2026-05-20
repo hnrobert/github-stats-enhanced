@@ -1,4 +1,4 @@
-name: Release
+name: Tag
 
 on:
   workflow_dispatch:
@@ -6,11 +6,6 @@ on:
       version:
         description: "Version to release (e.g. 1.2.0)"
         required: true
-      prerelease:
-        description: "Is this a pre-release?"
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   release:
@@ -58,6 +53,5 @@ jobs:
       - name: Create and push tag
         run: |
           TAG="v${{ inputs.version }}"
-          PRERELEASE="${{ inputs.prerelease }}"
-          git tag -a "$TAG" -m "Release $TAG${PRERELEASE:+ (pre-release)}"
+          git tag -a "$TAG" -m "Release $TAG"
           git push origin HEAD:main --follow-tags
