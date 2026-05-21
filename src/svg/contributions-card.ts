@@ -1,6 +1,6 @@
 import type { GitHubStats } from "../api/types.ts";
 import { getColors, getCardStyle, type Theme } from "./theme.ts";
-import { svgOpen, formatNumber, escapeXml, type CardOptions, FONT } from "./helpers.ts";
+import { svgOpen, formatNumber, escapeXml, responsiveWrap, type CardOptions, FONT } from "./helpers.ts";
 
 export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
@@ -90,11 +90,12 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
   const divider = `<line x1="${halfW}" y1="${divY1}" x2="${halfW}" y2="${divY1 + divH}"
     stroke="${c.border}" stroke-width="1"/>`;
 
-  return `${svgOpen(W, H, opts.responsive)}
+  const responsive = !!(opts.responsive);
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
+
+  return `${svgOpen(W, H, responsive)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${divider}
-  ${leftSection}
-  ${rightSection}
+  <rect class="card" width="${responsive ? '100%' : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${divider}${leftSection}${rightSection}${wClose}
 </svg>`;
 }

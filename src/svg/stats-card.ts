@@ -1,7 +1,7 @@
 import octicons from "@primer/octicons";
 import type { GitHubStats } from "../api/types.ts";
 import { getColors, getCardStyle, type Theme } from "./theme.ts";
-import { svgOpen, formatNumber, escapeXml, type CardOptions, FONT } from "./helpers.ts";
+import { svgOpen, formatNumber, escapeXml, responsiveWrap, type CardOptions, FONT } from "./helpers.ts";
 
 function octiconAt(name: string, color: string, x: number, y: number, size = 16): string {
   const icon = octicons[name as keyof typeof octicons];
@@ -59,19 +59,20 @@ function statBox(
   }).join("");
 }
 
-// Card 1: Followers + Total Stars
 export function generateStatsCard1(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
   const W = opts.width ?? 220;
   const H = opts.height ?? 200;
+  const responsive = !!(opts.responsive);
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
   const items = [
     { number: formatNumber(stats.user.followers),   label: "Followers",   icon: "people" },
     { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" },
   ];
-  return `${svgOpen(W, H, opts.responsive)}
+  return `${svgOpen(W, H, responsive)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${statBox(items, c, W, H)}
+  <rect class="card" width="${responsive ? '100%' : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${statBox(items, c, W, H)}${wClose}
 </svg>`;
 }
 
@@ -80,14 +81,16 @@ export function generateStatsCard2(stats: GitHubStats, theme: Theme = "adaptive"
   const c = getColors(theme);
   const W = opts.width ?? 220;
   const H = opts.height ?? 200;
+  const responsive = !!(opts.responsive);
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
   const items = [
     { number: formatNumber(stats.user.public_repos),      label: "Public Repos",      icon: "repo" },
     { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" },
   ];
-  return `${svgOpen(W, H, opts.responsive)}
+  return `${svgOpen(W, H, responsive)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${statBox(items, c, W, H)}
+  <rect class="card" width="${responsive ? '100%' : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${statBox(items, c, W, H)}${wClose}
 </svg>`;
 }
 

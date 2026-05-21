@@ -1,7 +1,7 @@
 import type { GitHubStats } from "../api/types.ts";
 import { getColors, getCardStyle, type Theme } from "./theme.ts";
 import { getLangColor } from "./colors.ts";
-import { svgOpen, escapeXml, type CardOptions, FONT } from "./helpers.ts";
+import { svgOpen, escapeXml, responsiveWrap, type CardOptions, FONT } from "./helpers.ts";
 
 export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
@@ -9,12 +9,15 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
   const W = opts.width ?? 500;
   const padX = 28;
   const innerW = W - padX * 2;
+  const responsive = !!(opts.responsive);
+  const bgW = responsive ? '100%' : `${W}`;
 
   if (langs.length === 0) {
-    return `${svgOpen(W, 100, opts.responsive)}
+    const [wOpen, wClose] = responsiveWrap(W, responsive);
+    return `${svgOpen(W, 100, responsive)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  <text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>
+  <rect class="card" width="${bgW}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}<text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>${wClose}
 </svg>`;
   }
 
@@ -104,10 +107,12 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
   }).join("");
 
   const H = legendStartY + rows.length * (itemH + rowGap) - rowGap + 20;
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
 
-  return `${svgOpen(W, H, opts.responsive)}
+  return `${svgOpen(W, H, responsive)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <rect class="card" width="${bgW}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}
   <g class="title">
   <text x="${W / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="20" font-weight="600"
     text-anchor="middle" font-family="${FONT}">Most Used Languages</text>
@@ -121,5 +126,6 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
   </clipPath>
   <g clip-path="url(#bc)" class="bar">${barSegments}</g>
   ${legendItems}
+  ${wClose}
 </svg>`;
 }
