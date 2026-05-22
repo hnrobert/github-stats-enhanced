@@ -9,7 +9,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
   const { yearlyContributions: yc, totalCommits } = stats.stats;
 
   const W = opts.width ?? 460;
-  const halfW = W / 2;
+  const splitX = W * 2 / 5;
 
   const numFontSize = 28;
   const labelFontSize = 13;
@@ -28,7 +28,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
   const H = opts.height ?? 180;
 
   // Left: Total Commits
-  const leftCX = halfW / 2;
+  const leftCX = splitX / 2;
   const numCapH = numFontSize * 0.72;
   const labelCapH = labelFontSize * 0.72;
   const groupH = numCapH + 10 + labelCapH;
@@ -45,7 +45,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
     </g>`;
 
   // Right: title + 2x2 grid
-  const rightStart = halfW;
+  const rightStart = splitX;
   const rightW     = W - rightStart;
   const rightGroupTop = H / 2 - totalRightH / 2;
   const titleY2    = rightGroupTop + titleCapH;
@@ -88,7 +88,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
 
   const divH  = H * 2 / 3;
   const divY1 = (H - divH) / 2;
-  const divider = `<line x1="${halfW}" y1="${divY1}" x2="${halfW}" y2="${divY1 + divH}"
+  const divider = `<line x1="${splitX}" y1="${divY1}" x2="${splitX}" y2="${divY1 + divH}"
     stroke="${c.border}" stroke-width="1"/>`;
 
   const responsive = !!(opts.responsive);
