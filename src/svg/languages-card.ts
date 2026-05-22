@@ -31,10 +31,13 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
   const totalPct = langs.reduce((s, l) => s + l.percentage, 0);
 
   let barCursor = padX;
-  const barSegments = langs.map((lang) => {
+  const barSegments = langs.map((lang, i) => {
     const color = getLangColor(lang.language);
     const normalizedPct = totalPct > 0 ? (lang.percentage / totalPct) * 100 : 0;
-    const segW = Math.max(2, Math.round((normalizedPct / 100) * innerW));
+    const isLast = i === langs.length - 1;
+    const segW = isLast
+      ? (padX + innerW - barCursor)
+      : Math.max(2, Math.round((normalizedPct / 100) * innerW));
     const seg = `<rect x="${barCursor}" y="${barY}" width="${segW}" height="${barH}" fill="${color}"/>`;
     barCursor += segW;
     return seg;
