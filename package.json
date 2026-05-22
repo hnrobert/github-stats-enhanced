@@ -1,6 +1,6 @@
 {
   "name": "github-stats-enhanced",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generate GitHub stats SVG cards via GitHub Actions",
   "type": "module",
   "scripts": {

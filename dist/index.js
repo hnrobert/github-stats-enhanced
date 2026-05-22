@@ -169,7 +169,7 @@ var require_octicons = __commonJS((exports, module) => {
 });
 
 // src/index.ts
-import * as fs2 from "node:fs";
+import * as fs3 from "node:fs";
 import * as path2 from "node:path";
 
 // src/api/queries.ts
@@ -3098,7 +3098,7 @@ function readStatsYaml(filePath) {
 }
 
 // src/generate.ts
-import * as fs from "node:fs";
+import * as fs2 from "node:fs";
 import * as path from "node:path";
 
 // src/svg/stats-card.ts
@@ -3161,10 +3161,20 @@ function getCardStyle(theme) {
 
 // src/svg/helpers.ts
 var FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
-function svgOpen(w, h, responsive = false) {
-  const wAttr = responsive ? `width="100%"` : `width="${w}"`;
-  const hAttr = responsive ? `` : `height="${h}"`;
-  return `<svg ${wAttr} ${hAttr} viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
+function svgOpen(w, h, responsive = false, minW) {
+  if (responsive) {
+    const minStyle = minW ? ` style="min-width:${minW}px"` : "";
+    return `<svg width="100%" height="${h}"${minStyle} xmlns="http://www.w3.org/2000/svg">`;
+  }
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
+}
+function responsiveWrap(w, responsive) {
+  if (!responsive)
+    return ["", ""];
+  return [
+    `<svg x="50%" y="0" width="${w}" height="100%" overflow="visible"><g transform="translate(-${w / 2}, 0)">`,
+    `</g></svg>`
+  ];
 }
 function formatNumber(n) {
   return n.toLocaleString();
@@ -3174,6 +3184,7 @@ function escapeXml(str2) {
 }
 
 // src/svg/stats-card.ts
+var STATS_MIN_W = 160;
 function octiconAt(name, color, x, y, size = 16) {
   const icon = import_octicons.default[name];
   if (!icon)
@@ -3185,29 +3196,33 @@ function octiconAt(name, color, x, y, size = 16) {
 function estimateWidth(text, fontSize) {
   return text.length * fontSize * 0.6;
 }
+var NUM_FONT = 28;
+var LABEL_FONT = 13;
+var NUM_LABEL_GAP = 10;
+function calcStatsHeight(_rowCount) {
+  return 200;
+}
 function statBox(items, c, W, H) {
   const iconSize = 16;
   const iconGap = 7;
-  const numFontSize = 28;
-  const labelFontSize = 13;
-  const numLabelGap = 10;
-  const groupH = numFontSize + numLabelGap + labelFontSize;
+  const groupH = NUM_FONT + NUM_LABEL_GAP + LABEL_FONT;
   return items.map((item, i2) => {
-    const cy = (i2 + 0.5) * (H / items.length);
-    const groupTop = cy - groupH / 2;
-    const numCY = groupTop + numFontSize / 2;
-    const labelCY = groupTop + numFontSize + numLabelGap + labelFontSize / 2;
+    const n = items.length;
+    const gap = (H - n * groupH) / (n + 1);
+    const groupTop = gap * (i2 + 1) + groupH * i2;
+    const numCY = groupTop + NUM_FONT / 2;
+    const labelCY = groupTop + NUM_FONT + NUM_LABEL_GAP + LABEL_FONT / 2;
     const iconTop = numCY - iconSize / 2;
-    const numW = estimateWidth(item.number, numFontSize);
+    const numW = estimateWidth(item.number, NUM_FONT);
     const groupW = iconSize + iconGap + numW;
     const iconX = W / 2 - groupW / 2;
     const numX = iconX + iconSize + iconGap;
     return `
     <g class="i${i2}">
     ${octiconAt(item.icon, c.textSecondary, iconX, iconTop, iconSize)}
-    <text x="${numX}" y="${numCY}" dominant-baseline="central" fill="${c.textPrimary}" font-size="${numFontSize}" font-weight="700"
+    <text x="${numX}" y="${numCY}" dominant-baseline="central" fill="${c.textPrimary}" font-size="${NUM_FONT}" font-weight="700"
       text-anchor="start" font-family="${FONT}">${item.number}</text>
-    <text x="${W / 2}" y="${labelCY}" dominant-baseline="central" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
+    <text x="${W / 2}" y="${labelCY}" dominant-baseline="central" fill="${c.textSecondary}" font-size="${LABEL_FONT}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
     </g>`;
   }).join("");
@@ -3215,29 +3230,33 @@ function statBox(items, c, W, H) {
 function generateStatsCard1(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
   const W = opts.width ?? 220;
-  const H = opts.height ?? 200;
+  const responsive = !!opts.responsive;
   const items = [
     { number: formatNumber(stats.user.followers), label: "Followers", icon: "people" },
     { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" }
   ];
-  return `${svgOpen(W, H, opts.responsive)}
+  const H = opts.height ?? calcStatsHeight(items.length);
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
+  return `${svgOpen(W, H, responsive, STATS_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${statBox(items, c, W, H)}
+  <rect class="card" width="${responsive ? "100%" : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${statBox(items, c, W, H)}${wClose}
 </svg>`;
 }
 function generateStatsCard2(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
   const W = opts.width ?? 220;
-  const H = opts.height ?? 200;
+  const responsive = !!opts.responsive;
   const items = [
     { number: formatNumber(stats.user.public_repos), label: "Public Repos", icon: "repo" },
     { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" }
   ];
-  return `${svgOpen(W, H, opts.responsive)}
+  const H = opts.height ?? calcStatsHeight(items.length);
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
+  return `${svgOpen(W, H, responsive, STATS_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${statBox(items, c, W, H)}
+  <rect class="card" width="${responsive ? "100%" : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${statBox(items, c, W, H)}${wClose}
 </svg>`;
 }
 
@@ -3272,23 +3291,28 @@ function getLangColor(lang) {
 }
 
 // src/svg/languages-card.ts
+var LANG_MIN_W = 300;
 function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
   const langs = stats.stats.languageStats.slice(0, opts.languageCount ?? 8);
   const W = opts.width ?? 500;
   const padX = 28;
   const innerW = W - padX * 2;
+  const responsive = !!opts.responsive;
+  const bgW = responsive ? "100%" : `${W}`;
   if (langs.length === 0) {
-    return `${svgOpen(W, 100, opts.responsive)}
+    const H2 = opts.height ?? 100;
+    const [wOpen2, wClose2] = responsiveWrap(W, responsive);
+    return `${svgOpen(W, H2, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  <text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>
+  <rect class="card" width="${bgW}" height="${H2}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen2}<text x="${W / 2}" y="${H2 / 2 + 5}" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>${wClose2}
 </svg>`;
   }
-  const titleY = 36;
+  const titleY = 24;
+  const barY = 36;
+  const barH = 8;
   const totalPct = langs.reduce((s, l) => s + l.percentage, 0);
-  const barY = 54;
-  const barH = 12;
   let barCursor = padX;
   const barSegments = langs.map((lang) => {
     const color = getLangColor(lang.language);
@@ -3298,18 +3322,18 @@ function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
     barCursor += segW;
     return seg;
   }).join("");
-  const legendStartY = barY + barH + 20;
-  const itemPadX = 10;
-  const itemPadY = 6;
-  const dotR = 6;
-  const fontSize = 13;
-  const charW = 7.5;
+  const legendStartY = barY + barH + 10;
+  const itemPadX = 6;
+  const itemPadY = 3;
+  const dotR = 4;
+  const fontSize = 10;
+  const charW = 6;
   const itemWidths = langs.map((lang) => {
     const nameLen = lang.language.length * charW;
     const pctLen = `${lang.percentage.toFixed(1)}%`.length * charW;
     return Math.ceil(dotR * 2 + 6 + nameLen + 4 + pctLen + itemPadX * 2 + 4);
   });
-  const rowGap = 10;
+  const rowGap = 6;
   const itemH = fontSize + itemPadY * 2;
   const rows = [];
   let currentRow = [];
@@ -3327,6 +3351,7 @@ function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
   });
   if (currentRow.length > 0)
     rows.push(currentRow);
+  const H = opts.height ?? legendStartY + rows.length * (itemH + rowGap) - rowGap + 14;
   const legendItems = rows.map((row, ri) => {
     const rowY = legendStartY + ri * (itemH + rowGap);
     const totalRowW = row.reduce((s, i2) => s + itemWidths[i2], 0) + (row.length - 1) * 8;
@@ -3342,7 +3367,7 @@ function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
       const pctX = cx + iW - itemPadX;
       const delay = (0.3 + idx * 0.07).toFixed(2);
       return `<g style="animation:fadeUp .4s ${delay}s cubic-bezier(.33,1,.68,1) both">
-        <rect x="${cx}" y="${rowY}" width="${iW}" height="${itemH}" rx="8"
+        <rect x="${cx}" y="${rowY}" width="${iW}" height="${itemH}" rx="6"
           fill="rgba(128,128,128,0.07)" stroke="rgba(128,128,128,0.15)" stroke-width="1"/>
         <circle cx="${cx + itemPadX + dotR}" cy="${rowY + itemH / 2}" r="${dotR}" fill="${color}"/>
         <text x="${nameX}" y="${rowY + itemH / 2 + 4}" fill="${c.textPrimary}" font-size="${fontSize}"
@@ -3352,36 +3377,50 @@ function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
       </g>`;
     }).join("");
   }).join("");
-  const H = legendStartY + rows.length * (itemH + rowGap) - rowGap + 20;
-  return `${svgOpen(W, H, opts.responsive)}
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
+  return `${svgOpen(W, H, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <rect class="card" width="${bgW}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}
   <g class="title">
-  <text x="${W / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="20" font-weight="600"
+  <text x="${W / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="14" font-weight="600"
     text-anchor="middle" font-family="${FONT}">Most Used Languages</text>
   </g>
-  <rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="6" fill="${c.progressBg}" class="bar"/>
+  <rect x="${padX}" y="${barY}" width="${innerW}" height="${barH}" rx="5" fill="${c.progressBg}" class="bar"/>
   <clipPath id="bc">
-    <rect x="${padX}" y="${barY}" width="0" height="${barH}" rx="6">
+    <rect x="${padX}" y="${barY}" width="0" height="${barH}" rx="5">
       <animate attributeName="width" from="0" to="${innerW}" dur="0.7s" begin="0.2s"
         calcMode="spline" keySplines="0.4 0 0.2 1" fill="freeze"/>
     </rect>
   </clipPath>
   <g clip-path="url(#bc)" class="bar">${barSegments}</g>
   ${legendItems}
+  ${wClose}
 </svg>`;
 }
 
 // src/svg/contributions-card.ts
+var CONTRIB_MIN_W = 280;
 function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
   const c = getColors(theme);
   const { yearlyContributions: yc, totalCommits } = stats.stats;
   const W = opts.width ?? 460;
-  const H = opts.height ?? 180;
-  const halfW = W / 2;
-  const leftCX = halfW / 2;
+  const splitX = W * 2 / 5;
   const numFontSize = 28;
   const labelFontSize = 13;
+  const titleFontSize = 13;
+  const gridNumFontSize = 19;
+  const gridLabelFontSize = 11;
+  const titleCapH = titleFontSize * 0.72;
+  const gridNumCapH = gridNumFontSize * 0.72;
+  const gridLabelCapH = gridLabelFontSize * 0.72;
+  const gridItemH = gridNumCapH + 6 + gridLabelCapH;
+  const titleToGrid = 14;
+  const rowGap = 12;
+  const totalRightH = titleCapH + titleToGrid + gridItemH + rowGap + gridItemH;
+  const vPad = 28;
+  const H = opts.height ?? 180;
+  const leftCX = splitX / 2;
   const numCapH = numFontSize * 0.72;
   const labelCapH = labelFontSize * 0.72;
   const groupH = numCapH + 10 + labelCapH;
@@ -3395,18 +3434,8 @@ function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
     <text x="${leftCX}" y="${labelY}" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">Total Commits</text>
     </g>`;
-  const rightStart = halfW;
+  const rightStart = splitX;
   const rightW = W - rightStart;
-  const titleFontSize = 13;
-  const titleCapH = titleFontSize * 0.72;
-  const gridNumFontSize = 19;
-  const gridLabelFontSize = 11;
-  const gridNumCapH = gridNumFontSize * 0.72;
-  const gridLabelCapH = gridLabelFontSize * 0.72;
-  const gridItemH = gridNumCapH + 6 + gridLabelCapH;
-  const titleToGrid = 14;
-  const rowGap = 12;
-  const totalRightH = titleCapH + titleToGrid + gridItemH + rowGap + gridItemH;
   const rightGroupTop = H / 2 - totalRightH / 2;
   const titleY2 = rightGroupTop + titleCapH;
   const gridStartY = titleY2 + titleToGrid;
@@ -3443,14 +3472,14 @@ function generateContributionsCard(stats, theme = "adaptive", opts = {}) {
     ${gridCells}`;
   const divH = H * 2 / 3;
   const divY1 = (H - divH) / 2;
-  const divider = `<line x1="${halfW}" y1="${divY1}" x2="${halfW}" y2="${divY1 + divH}"
+  const divider = `<line x1="${splitX}" y1="${divY1}" x2="${splitX}" y2="${divY1 + divH}"
     stroke="${c.border}" stroke-width="1"/>`;
-  return `${svgOpen(W, H, opts.responsive)}
+  const responsive = !!opts.responsive;
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
+  return `${svgOpen(W, H, responsive, CONTRIB_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${divider}
-  ${leftSection}
-  ${rightSection}
+  <rect class="card" width="${responsive ? "100%" : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${divider}${leftSection}${rightSection}${wClose}
 </svg>`;
 }
 
@@ -3770,18 +3799,27 @@ var github_stats_enhanced_default = `<!DOCTYPE html>
 
 // src/demo.ts
 var template = github_stats_enhanced_default;
+var TEMPLATE_BASE = "https://raw.githubusercontent.com/hnrobert/hnrobert/github-stats-enhanced";
 function buildDemo(username, displayName, targetRepo, targetBranch) {
-  return template.replaceAll("Robert He", displayName).replaceAll(`"https://github.com/hnrobert"`, `"https://github.com/${username}"`).replaceAll(`>@hnrobert ↗<`, `>@${username} ↗<`).replaceAll(`hnrobert/hnrobert/github-stats-enhanced`, `${username}/${targetRepo}/${targetBranch}`);
+  const baseUrl = targetRepo === "." || targetBranch === "." ? "." : `https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}`;
+  return template.replaceAll("Robert He", displayName).replaceAll(`"https://github.com/hnrobert"`, `"https://github.com/${username}"`).replaceAll(`>@hnrobert ↗<`, `>@${username} ↗<`).replaceAll(TEMPLATE_BASE, baseUrl);
 }
 
 // src/action/logger.ts
 import * as os from "node:os";
+import * as fs from "node:fs";
 function log(message) {
   process.stdout.write(`${message}${os.EOL}`);
 }
 function setFailed(message) {
   process.exitCode = 1;
   process.stdout.write(`::error::${message.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")}${os.EOL}`);
+}
+function appendSummary(markdown) {
+  const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+  if (!summaryFile)
+    return;
+  fs.appendFileSync(summaryFile, markdown + os.EOL, "utf-8");
 }
 
 // src/generate.ts
@@ -3827,27 +3865,33 @@ function filterContributionStats(stats, opts) {
   };
 }
 function generateSvgs(langStats, contribStats, outputDir, theme, statsOpts, contribOpts, langOpts) {
+  const withResponsive = !!(statsOpts.responsive || contribOpts.responsive || langOpts.responsive);
+  const fixed = (o) => ({ ...o, responsive: false });
+  const resp = (o) => ({ ...o, responsive: true });
   const outputs = [
-    { name: "stats1.svg", content: generateStatsCard1(langStats, theme, statsOpts) },
-    { name: "stats1-adaptive.svg", content: generateStatsCard1(langStats, "adaptive", statsOpts) },
-    { name: "stats1-dark.svg", content: generateStatsCard1(langStats, "dark", statsOpts) },
-    { name: "stats1-light.svg", content: generateStatsCard1(langStats, "light", statsOpts) },
-    { name: "stats2.svg", content: generateStatsCard2(langStats, theme, statsOpts) },
-    { name: "stats2-adaptive.svg", content: generateStatsCard2(langStats, "adaptive", statsOpts) },
-    { name: "stats2-dark.svg", content: generateStatsCard2(langStats, "dark", statsOpts) },
-    { name: "stats2-light.svg", content: generateStatsCard2(langStats, "light", statsOpts) },
-    { name: "contributions.svg", content: generateContributionsCard(contribStats, theme, contribOpts) },
-    { name: "contributions-adaptive.svg", content: generateContributionsCard(contribStats, "adaptive", contribOpts) },
-    { name: "contributions-dark.svg", content: generateContributionsCard(contribStats, "dark", contribOpts) },
-    { name: "contributions-light.svg", content: generateContributionsCard(contribStats, "light", contribOpts) },
-    { name: "languages.svg", content: generateLanguagesCard(langStats, theme, langOpts) },
-    { name: "languages-adaptive.svg", content: generateLanguagesCard(langStats, "adaptive", langOpts) },
-    { name: "languages-dark.svg", content: generateLanguagesCard(langStats, "dark", langOpts) },
-    { name: "languages-light.svg", content: generateLanguagesCard(langStats, "light", langOpts) }
+    { name: "stats1.svg", content: generateStatsCard1(langStats, theme, fixed(statsOpts)) },
+    { name: "stats1-adaptive.svg", content: generateStatsCard1(langStats, "adaptive", fixed(statsOpts)) },
+    { name: "stats1-dark.svg", content: generateStatsCard1(langStats, "dark", fixed(statsOpts)) },
+    { name: "stats1-light.svg", content: generateStatsCard1(langStats, "light", fixed(statsOpts)) },
+    { name: "stats2.svg", content: generateStatsCard2(langStats, theme, fixed(statsOpts)) },
+    { name: "stats2-adaptive.svg", content: generateStatsCard2(langStats, "adaptive", fixed(statsOpts)) },
+    { name: "stats2-dark.svg", content: generateStatsCard2(langStats, "dark", fixed(statsOpts)) },
+    { name: "stats2-light.svg", content: generateStatsCard2(langStats, "light", fixed(statsOpts)) },
+    { name: "contributions.svg", content: generateContributionsCard(contribStats, theme, fixed(contribOpts)) },
+    { name: "contributions-adaptive.svg", content: generateContributionsCard(contribStats, "adaptive", fixed(contribOpts)) },
+    { name: "contributions-dark.svg", content: generateContributionsCard(contribStats, "dark", fixed(contribOpts)) },
+    { name: "contributions-light.svg", content: generateContributionsCard(contribStats, "light", fixed(contribOpts)) },
+    { name: "languages.svg", content: generateLanguagesCard(langStats, theme, fixed(langOpts)) },
+    { name: "languages-adaptive.svg", content: generateLanguagesCard(langStats, "adaptive", fixed(langOpts)) },
+    { name: "languages-dark.svg", content: generateLanguagesCard(langStats, "dark", fixed(langOpts)) },
+    { name: "languages-light.svg", content: generateLanguagesCard(langStats, "light", fixed(langOpts)) }
   ];
+  if (withResponsive) {
+    outputs.push({ name: "stats1-responsive.svg", content: generateStatsCard1(langStats, theme, resp(statsOpts)) }, { name: "stats1-adaptive-responsive.svg", content: generateStatsCard1(langStats, "adaptive", resp(statsOpts)) }, { name: "stats1-dark-responsive.svg", content: generateStatsCard1(langStats, "dark", resp(statsOpts)) }, { name: "stats1-light-responsive.svg", content: generateStatsCard1(langStats, "light", resp(statsOpts)) }, { name: "stats2-responsive.svg", content: generateStatsCard2(langStats, theme, resp(statsOpts)) }, { name: "stats2-adaptive-responsive.svg", content: generateStatsCard2(langStats, "adaptive", resp(statsOpts)) }, { name: "stats2-dark-responsive.svg", content: generateStatsCard2(langStats, "dark", resp(statsOpts)) }, { name: "stats2-light-responsive.svg", content: generateStatsCard2(langStats, "light", resp(statsOpts)) }, { name: "contributions-responsive.svg", content: generateContributionsCard(contribStats, theme, resp(contribOpts)) }, { name: "contributions-adaptive-responsive.svg", content: generateContributionsCard(contribStats, "adaptive", resp(contribOpts)) }, { name: "contributions-dark-responsive.svg", content: generateContributionsCard(contribStats, "dark", resp(contribOpts)) }, { name: "contributions-light-responsive.svg", content: generateContributionsCard(contribStats, "light", resp(contribOpts)) }, { name: "languages-responsive.svg", content: generateLanguagesCard(langStats, theme, resp(langOpts)) }, { name: "languages-adaptive-responsive.svg", content: generateLanguagesCard(langStats, "adaptive", resp(langOpts)) }, { name: "languages-dark-responsive.svg", content: generateLanguagesCard(langStats, "dark", resp(langOpts)) }, { name: "languages-light-responsive.svg", content: generateLanguagesCard(langStats, "light", resp(langOpts)) });
+  }
   for (const { name, content } of outputs) {
     const filePath = path.join(outputDir, name);
-    fs.writeFileSync(filePath, content, "utf-8");
+    fs2.writeFileSync(filePath, content, "utf-8");
     log(`- ${filePath}`);
   }
   log(`
@@ -3858,13 +3902,13 @@ function generateReport(stats, outputDir, targetRepo, targetBranch) {
   const u = stats.user;
   const baseUrl = targetRepo && targetBranch ? `https://raw.githubusercontent.com/${u.login}/${targetRepo}/${targetBranch}` : ".";
   const treeUrl = targetRepo && targetBranch ? `https://github.com/${u.login}/${targetRepo}/tree/${targetBranch}` : ".";
-  fs.writeFileSync(filePath, buildReport(stats, baseUrl, treeUrl), "utf-8");
+  fs2.writeFileSync(filePath, buildReport(stats, baseUrl, treeUrl), "utf-8");
   log(`- ${filePath}`);
 }
 function generateDemo(stats, outputDir = ".", targetRepo = stats.user.login, targetBranch = "github-stats-enhanced") {
   const filePath = path.join(outputDir, "index.html");
   const displayName = stats.user.name ?? stats.user.login;
-  fs.writeFileSync(filePath, buildDemo(stats.user.login, displayName, targetRepo, targetBranch), "utf-8");
+  fs2.writeFileSync(filePath, buildDemo(stats.user.login, displayName, targetRepo, targetBranch), "utf-8");
   log(`- ${filePath}`);
 }
 // src/action/inputs.ts
@@ -3923,7 +3967,7 @@ function readFilterOptions() {
     const theme = getInput("theme") || "adaptive";
     const withReport = getInput("generate_report").toLowerCase() !== "false";
     const { statsOpts, contribOpts, langOpts } = buildCardOpts(getBoolInput("responsive"));
-    fs2.mkdirSync(outputDir, { recursive: true });
+    fs3.mkdirSync(outputDir, { recursive: true });
     if (mode === "fetch" || mode === "all") {
       const username = getInput("github_user_name") || process.env.GITHUB_USER_NAME || process.env.GITHUB_REPOSITORY_OWNER || "";
       const token = process.env.SELF_GITHUB_TOKEN || getInput("self_github_token") || process.env.GITHUB_TOKEN || getInput("github_token");
@@ -3948,15 +3992,56 @@ function readFilterOptions() {
           generateReport(langFiltered, outputDir, targetRepo, targetBranch);
           generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
+        const base = `https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}`;
+        const responsive = getBoolInput("responsive");
+        const suffix = responsive ? "-responsive" : "";
         log(`
 README usage (adaptive theme):`);
-        log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats1-adaptive.svg)`);
-        log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats2-adaptive.svg)`);
-        log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/contributions-adaptive.svg)`);
-        log(`  ![Languages](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/languages-adaptive.svg)`);
+        log(`  ![Stats1](${base}/stats1-adaptive${suffix}.svg)`);
+        log(`  ![Stats2](${base}/stats2-adaptive${suffix}.svg)`);
+        log(`  ![Contributions](${base}/contributions-adaptive${suffix}.svg)`);
+        log(`  ![Languages](${base}/languages-adaptive${suffix}.svg)`);
+        const imgSuffix = responsive ? "-responsive" : "";
+        appendSummary([
+          `## GitHub Stats Generated`,
+          ``,
+          `**User:** [${username}](https://github.com/${username})`,
+          `**Branch:** \`${targetBranch}\``,
+          ``,
+          `### Preview`,
+          ``,
+          `<div>`,
+          `<img src="${base}/stats1-adaptive${imgSuffix}.svg" width="22%" alt="Stats 1">`,
+          `<img src="${base}/stats2-adaptive${imgSuffix}.svg" width="22%" alt="Stats 2">`,
+          `<img src="${base}/contributions-adaptive${imgSuffix}.svg" width="51%" alt="Contributions">`,
+          `</div>`,
+          ``,
+          `<img src="${base}/languages-adaptive${imgSuffix}.svg" width="97%" alt="Languages">`,
+          ``,
+          `### README Usage`,
+          ``,
+          `\`\`\`markdown`,
+          `![Stats1](${base}/stats1-adaptive.svg)`,
+          `![Stats2](${base}/stats2-adaptive.svg)`,
+          `![Contributions](${base}/contributions-adaptive.svg)`,
+          `![Languages](${base}/languages-adaptive.svg)`,
+          `\`\`\``,
+          ...responsive ? [
+            ``,
+            `### README Usage (responsive)`,
+            ``,
+            `\`\`\`markdown`,
+            `![Stats1](${base}/stats1-adaptive-responsive.svg)`,
+            `![Stats2](${base}/stats2-adaptive-responsive.svg)`,
+            `![Contributions](${base}/contributions-adaptive-responsive.svg)`,
+            `![Languages](${base}/languages-adaptive-responsive.svg)`,
+            `\`\`\``
+          ] : []
+        ].join(`
+`));
       }
     } else if (mode === "generate") {
-      if (!fs2.existsSync(dataFile))
+      if (!fs3.existsSync(dataFile))
         throw new Error(`data_file not found: ${dataFile}`);
       log(`\uD83D\uDCC4 Loading stats from ${dataFile}`);
       const raw = readStatsYaml(dataFile);
