@@ -11,9 +11,9 @@ export const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial
 export function svgOpen(w: number, h: number, responsive = false, minW?: number): string {
   if (responsive) {
     const minStyle = minW ? ` style="min-width:${minW}px"` : "";
-    return `<svg width="100%" height="${h}"${minStyle} xmlns="http://www.w3.org/2000/svg">`;
+    return `<svg width="100%" viewBox="-1 -1 ${w + 2} ${h + 2}"${minStyle} xmlns="http://www.w3.org/2000/svg">`;
   }
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
+  return `<svg width="${w + 2}" height="${h + 2}" viewBox="-1 -1 ${w + 2} ${h + 2}" xmlns="http://www.w3.org/2000/svg">`;
 }
 
 // Wraps content so background stretches but text/layout stays fixed-size and centered

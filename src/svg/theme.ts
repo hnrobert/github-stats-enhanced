@@ -20,7 +20,7 @@ export const THEMES: Record<"dark" | "light", ThemeColors> = {
   },
   light: {
     bg:           "rgba(255,255,255,0.8)",
-    border:       "rgba(255,255,255,0.2)",
+    border:       "rgba(0,0,0,0.1)",
     textPrimary:  "#1f2937",
     textSecondary:"#6b7280",
     accentBlue:   "#3b82f6",
