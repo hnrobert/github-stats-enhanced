@@ -37,9 +37,8 @@ export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): s
     ``,
     `## Summary`,
     ``,
-    `| | |`,
-    `|---|---|`,
     `| Name | ${u.name ?? u.login} |`,
+    `|---|---|`,
     `| Followers | ${u.followers} |`,
     `| Public Repos | ${u.public_repos} |`,
     `| Total Stars | ${st.totalStars} |`,
@@ -80,5 +79,5 @@ export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): s
     lines.push(``);
   }
 
-  return lines.join("\n") + "\n";
+  return lines.join("\n").trimEnd() + "\n";
 }
