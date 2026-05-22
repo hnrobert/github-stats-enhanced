@@ -71,8 +71,7 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
         log(`  ![Stats2](${base}/stats2-adaptive${suffix}.svg)`);
         log(`  ![Contributions](${base}/contributions-adaptive${suffix}.svg)`);
         log(`  ![Languages](${base}/languages-adaptive${suffix}.svg)`);
-        const imgSuffix = responsive ? "-responsive" : "";
-        appendSummary([
+        const summaryLines: string[] = [
           `## GitHub Stats Generated`,
           ``,
           `**User:** [${username}](https://github.com/${username})`,
@@ -81,14 +80,14 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           `### Preview`,
           ``,
           `<div>`,
-          `<img src="${base}/stats1-adaptive${imgSuffix}.svg" width="22%" alt="Stats 1">`,
-          `<img src="${base}/stats2-adaptive${imgSuffix}.svg" width="22%" alt="Stats 2">`,
-          `<img src="${base}/contributions-adaptive${imgSuffix}.svg" width="51%" alt="Contributions">`,
+          `<img src="${base}/stats1-adaptive.svg" width="22%" alt="Stats 1">`,
+          `<img src="${base}/stats2-adaptive.svg" width="22%" alt="Stats 2">`,
+          `<img src="${base}/contributions-adaptive.svg" width="51%" alt="Contributions">`,
           `</div>`,
           ``,
-          `<img src="${base}/languages-adaptive${imgSuffix}.svg" width="97%" alt="Languages">`,
+          `<img src="${base}/languages-adaptive.svg" width="97%" alt="Languages">`,
           ``,
-          `### README Usage`,
+          `### Markdown Usage`,
           ``,
           `\`\`\`markdown`,
           `![Stats1](${base}/stats1-adaptive.svg)`,
@@ -96,9 +95,33 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           `![Contributions](${base}/contributions-adaptive.svg)`,
           `![Languages](${base}/languages-adaptive.svg)`,
           `\`\`\``,
-          ...(responsive ? [
+          ``,
+          `### HTML Usage (with dark/light theme support)`,
+          ``,
+          `\`\`\`html`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats1-dark.svg" />`,
+          `  <img src="${base}/stats1-light.svg" width="22%" alt="Stats 1" hspace="4" />`,
+          `</picture>`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats2-dark.svg" />`,
+          `  <img src="${base}/stats2-light.svg" width="22%" alt="Stats 2" hspace="4" />`,
+          `</picture>`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/contributions-dark.svg" />`,
+          `  <img src="${base}/contributions-light.svg" width="51%" alt="Contributions" hspace="4" />`,
+          `</picture>`,
+          `<br/>`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/languages-dark.svg" />`,
+          `  <img src="${base}/languages-light.svg" width="97%" alt="Languages" />`,
+          `</picture>`,
+          `\`\`\``,
+        ];
+        if (responsive) {
+          summaryLines.push(
             ``,
-            `### README Usage (responsive)`,
+            `### Markdown Usage (responsive)`,
             ``,
             `\`\`\`markdown`,
             `![Stats1](${base}/stats1-adaptive-responsive.svg)`,
@@ -106,8 +129,31 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
             `![Contributions](${base}/contributions-adaptive-responsive.svg)`,
             `![Languages](${base}/languages-adaptive-responsive.svg)`,
             `\`\`\``,
-          ] : []),
-        ].join("\n"));
+            ``,
+            `### HTML Usage (responsive, with dark/light theme support)`,
+            ``,
+            `\`\`\`html`,
+            `<picture>`,
+            `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats1-dark-responsive.svg" />`,
+            `  <img src="${base}/stats1-light-responsive.svg" width="22%" alt="Stats 1" hspace="4" />`,
+            `</picture>`,
+            `<picture>`,
+            `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats2-dark-responsive.svg" />`,
+            `  <img src="${base}/stats2-light-responsive.svg" width="22%" alt="Stats 2" hspace="4" />`,
+            `</picture>`,
+            `<picture>`,
+            `  <source media="(prefers-color-scheme: dark)" srcset="${base}/contributions-dark-responsive.svg" />`,
+            `  <img src="${base}/contributions-light-responsive.svg" width="51%" alt="Contributions" hspace="4" />`,
+            `</picture>`,
+            `<br/>`,
+            `<picture>`,
+            `  <source media="(prefers-color-scheme: dark)" srcset="${base}/languages-dark-responsive.svg" />`,
+            `  <img src="${base}/languages-light-responsive.svg" width="97%" alt="Languages" />`,
+            `</picture>`,
+            `\`\`\``,
+          );
+        }
+        appendSummary(summaryLines.join("\n"));
       }
     } else if (mode === "generate") {
       if (!fs.existsSync(dataFile)) throw new Error(`data_file not found: ${dataFile}`);
