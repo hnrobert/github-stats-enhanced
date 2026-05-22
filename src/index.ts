@@ -64,11 +64,14 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
         const base = `https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}`;
+        const responsive = getBoolInput("responsive");
+        const suffix = responsive ? "-responsive" : "";
         log(`\nREADME usage (adaptive theme):`);
-        log(`  ![Stats1](${base}/stats1-adaptive.svg)`);
-        log(`  ![Stats2](${base}/stats2-adaptive.svg)`);
-        log(`  ![Contributions](${base}/contributions-adaptive.svg)`);
-        log(`  ![Languages](${base}/languages-adaptive.svg)`);
+        log(`  ![Stats1](${base}/stats1-adaptive${suffix}.svg)`);
+        log(`  ![Stats2](${base}/stats2-adaptive${suffix}.svg)`);
+        log(`  ![Contributions](${base}/contributions-adaptive${suffix}.svg)`);
+        log(`  ![Languages](${base}/languages-adaptive${suffix}.svg)`);
+        const imgSuffix = responsive ? "-responsive" : "";
         appendSummary([
           `## GitHub Stats Generated`,
           ``,
@@ -78,12 +81,12 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           `### Preview`,
           ``,
           `<div>`,
-          `<img src="${base}/stats1-adaptive.svg" width="22%" alt="Stats 1">`,
-          `<img src="${base}/stats2-adaptive.svg" width="22%" alt="Stats 2">`,
-          `<img src="${base}/contributions-adaptive.svg" width="51%" alt="Contributions">`,
+          `<img src="${base}/stats1-adaptive${imgSuffix}.svg" width="22%" alt="Stats 1">`,
+          `<img src="${base}/stats2-adaptive${imgSuffix}.svg" width="22%" alt="Stats 2">`,
+          `<img src="${base}/contributions-adaptive${imgSuffix}.svg" width="51%" alt="Contributions">`,
           `</div>`,
           ``,
-          `<img src="${base}/languages-adaptive.svg" width="97%" alt="Languages">`,
+          `<img src="${base}/languages-adaptive${imgSuffix}.svg" width="97%" alt="Languages">`,
           ``,
           `### README Usage`,
           ``,
@@ -93,6 +96,17 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           `![Contributions](${base}/contributions-adaptive.svg)`,
           `![Languages](${base}/languages-adaptive.svg)`,
           `\`\`\``,
+          ...(responsive ? [
+            ``,
+            `### README Usage (responsive)`,
+            ``,
+            `\`\`\`markdown`,
+            `![Stats1](${base}/stats1-adaptive-responsive.svg)`,
+            `![Stats2](${base}/stats2-adaptive-responsive.svg)`,
+            `![Contributions](${base}/contributions-adaptive-responsive.svg)`,
+            `![Languages](${base}/languages-adaptive-responsive.svg)`,
+            `\`\`\``,
+          ] : []),
         ].join("\n"));
       }
     } else if (mode === "generate") {
