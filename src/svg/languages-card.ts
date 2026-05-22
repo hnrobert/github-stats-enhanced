@@ -19,7 +19,7 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
     const [wOpen, wClose] = responsiveWrap(W, responsive);
     return `${svgOpen(W, H, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${bgW}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <rect class="card" width="${bgW}" height="${H}" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="0.5"/>
   ${wOpen}<text x="${W / 2}" y="${H / 2 + 5}" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>${wClose}
 </svg>`;
   }
@@ -107,7 +107,7 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
 
   return `${svgOpen(W, H, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${bgW}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <rect class="card" width="${bgW}" height="${H}" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="0.5"/>
   ${wOpen}
   <g class="title">
   <text x="${W / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="14" font-weight="600"

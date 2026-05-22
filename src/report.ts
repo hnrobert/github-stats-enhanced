@@ -2,7 +2,7 @@ import type { GitHubStats } from "./api/types.ts";
 
 export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): string {
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-  const u  = stats.user;
+  const u = stats.user;
   const st = stats.stats;
   const base = baseUrl;
   const tree = treeUrl;
@@ -26,20 +26,19 @@ export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): s
     `> Powered by [@hnrobert/github-stats-enhanced](https://github.com/hnrobert/github-stats-enhanced)`,
     ``,
     `<div align="center" style="max-width:800px;margin:0 auto">`,
-    card("stats1-dark.svg", "stats1-light.svg", "22%", "Stats 1", "4") +
-    card("stats2-dark.svg", "stats2-light.svg", "22%", "Stats 2", "4") +
-    card("contributions-dark.svg", "contributions-light.svg", "51%", "Contributions", "4"),
+    card("stats1-dark.svg", "stats1-light.svg", "21.75%", "Stats 1", "4") +
+    card("stats2-dark.svg", "stats2-light.svg", "21.75%", "Stats 2", "4") +
+    card("contributions-dark.svg", "contributions-light.svg", "50.5%", "Contributions", "4"),
     ``,
     `<br/>`,
     ``,
-    card("languages-dark.svg", "languages-light.svg", "97%", "Languages"),
+    card("languages-dark.svg", "languages-light.svg", "96.5%", "Languages"),
     `</div>`,
     ``,
     `## Summary`,
     ``,
-    `| | |`,
-    `|---|---|`,
     `| Name | ${u.name ?? u.login} |`,
+    `|---|---|`,
     `| Followers | ${u.followers} |`,
     `| Public Repos | ${u.public_repos} |`,
     `| Total Stars | ${st.totalStars} |`,
@@ -80,5 +79,5 @@ export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): s
     lines.push(``);
   }
 
-  return lines.join("\n") + "\n";
+  return lines.join("\n").trimEnd() + "\n";
 }
