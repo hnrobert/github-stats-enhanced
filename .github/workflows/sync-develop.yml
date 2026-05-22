@@ -11,6 +11,8 @@ jobs:
     name: Sync develop branch with main
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
