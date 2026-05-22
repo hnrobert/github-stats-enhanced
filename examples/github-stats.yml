@@ -8,11 +8,17 @@
 #              then set `self_github_token: ${{ secrets.SELF_GITHUB_TOKEN }}`.
 #              Use this if you want private repo data or org contribution stats.
 #
-# The generated SVGs are pushed to the branch set by `target_branch` (default: github-stats-enhanced):
+# The generated SVGs are pushed to the branch set by `target_branch` (default: github-stats-enhanced).
+# Fixed-size files (always generated):
 #   ![Stats1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats1-adaptive.svg)
 #   ![Stats2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats2-adaptive.svg)
 #   ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/contributions-adaptive.svg)
 #   ![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive.svg)
+# Responsive files (generated when responsive: "true", scale to container width):
+#   ![Stats1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats1-adaptive-responsive.svg)
+#   ![Stats2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats2-adaptive-responsive.svg)
+#   ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/contributions-adaptive-responsive.svg)
+#   ![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive-responsive.svg)
 #
 # Pipeline modes:
 #   mode: "all"      — fetch from GitHub API + generate SVGs in one step (default)

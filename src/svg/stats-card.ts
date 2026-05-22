@@ -1,7 +1,9 @@
 import octicons from "@primer/octicons";
 import type { GitHubStats } from "../api/types.ts";
 import { getColors, getCardStyle, type Theme } from "./theme.ts";
-import { svgOpen, formatNumber, escapeXml, type CardOptions, FONT } from "./helpers.ts";
+import { svgOpen, formatNumber, escapeXml, responsiveWrap, type CardOptions, FONT } from "./helpers.ts";
+
+const STATS_MIN_W = 160;
 
 function octiconAt(name: string, color: string, x: number, y: number, size = 16): string {
   const icon = octicons[name as keyof typeof octicons];
@@ -11,9 +13,17 @@ function octiconAt(name: string, color: string, x: number, y: number, size = 16)
   return `<g transform="translate(${x},${y})" fill="${color}">${inner}</g>`;
 }
 
-// Approximate rendered width of bold text at given font-size
 function estimateWidth(text: string, fontSize: number): number {
   return text.length * fontSize * 0.6;
+}
+
+const NUM_FONT = 28;
+const LABEL_FONT = 13;
+const NUM_LABEL_GAP = 10;
+const ROW_PAD = 24; // vertical padding per row (top+bottom)
+
+function calcStatsHeight(_rowCount: number): number {
+  return 200;
 }
 
 function statBox(
@@ -24,26 +34,16 @@ function statBox(
 ): string {
   const iconSize = 16;
   const iconGap = 7;
-  const numFontSize = 28;
-  const labelFontSize = 13;
-  const numLabelGap = 10;
-
-  // Use em-square heights so dominant-baseline="central" aligns correctly
-  const groupH = numFontSize + numLabelGap + labelFontSize;
+  const groupH = NUM_FONT + NUM_LABEL_GAP + LABEL_FONT;
 
   return items.map((item, i) => {
-    const cy = (i + 0.5) * (H / items.length);
-    const groupTop = cy - groupH / 2;
-
-    // Center y for each row — matches dominant-baseline="central"
-    const numCY = groupTop + numFontSize / 2;
-    const labelCY = groupTop + numFontSize + numLabelGap + labelFontSize / 2;
-
-    // Icon center aligned to numCY
+    const n = items.length;
+    const gap = (H - n * groupH) / (n + 1);
+    const groupTop = gap * (i + 1) + groupH * i;
+    const numCY = groupTop + NUM_FONT / 2;
+    const labelCY = groupTop + NUM_FONT + NUM_LABEL_GAP + LABEL_FONT / 2;
     const iconTop = numCY - iconSize / 2;
-
-    // Horizontal: center icon+gap+number as a unit
-    const numW = estimateWidth(item.number, numFontSize);
+    const numW = estimateWidth(item.number, NUM_FONT);
     const groupW = iconSize + iconGap + numW;
     const iconX = W / 2 - groupW / 2;
     const numX = iconX + iconSize + iconGap;
@@ -51,43 +51,45 @@ function statBox(
     return `
     <g class="i${i}">
     ${octiconAt(item.icon, c.textSecondary, iconX, iconTop, iconSize)}
-    <text x="${numX}" y="${numCY}" dominant-baseline="central" fill="${c.textPrimary}" font-size="${numFontSize}" font-weight="700"
+    <text x="${numX}" y="${numCY}" dominant-baseline="central" fill="${c.textPrimary}" font-size="${NUM_FONT}" font-weight="700"
       text-anchor="start" font-family="${FONT}">${item.number}</text>
-    <text x="${W / 2}" y="${labelCY}" dominant-baseline="central" fill="${c.textSecondary}" font-size="${labelFontSize}" font-weight="500"
+    <text x="${W / 2}" y="${labelCY}" dominant-baseline="central" fill="${c.textSecondary}" font-size="${LABEL_FONT}" font-weight="500"
       text-anchor="middle" font-family="${FONT}">${escapeXml(item.label)}</text>
     </g>`;
   }).join("");
 }
 
-// Card 1: Followers + Total Stars
 export function generateStatsCard1(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
   const W = opts.width ?? 220;
-  const H = opts.height ?? 200;
+  const responsive = !!(opts.responsive);
   const items = [
     { number: formatNumber(stats.user.followers),   label: "Followers",   icon: "people" },
     { number: formatNumber(stats.stats.totalStars), label: "Total Stars", icon: "star" },
   ];
-  return `${svgOpen(W, H, opts.responsive)}
+  const H = opts.height ?? calcStatsHeight(items.length);
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
+  return `${svgOpen(W, H, responsive, STATS_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${statBox(items, c, W, H)}
+  <rect class="card" width="${responsive ? '100%' : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${statBox(items, c, W, H)}${wClose}
 </svg>`;
 }
 
-// Card 2: Public Repos + Contributed Repos
 export function generateStatsCard2(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
   const W = opts.width ?? 220;
-  const H = opts.height ?? 200;
+  const responsive = !!(opts.responsive);
   const items = [
     { number: formatNumber(stats.user.public_repos),      label: "Public Repos",      icon: "repo" },
     { number: formatNumber(stats.stats.contributedRepos), label: "Contributed Repos", icon: "git-pull-request" },
   ];
-  return `${svgOpen(W, H, opts.responsive)}
+  const H = opts.height ?? calcStatsHeight(items.length);
+  const [wOpen, wClose] = responsiveWrap(W, responsive);
+  return `${svgOpen(W, H, responsive, STATS_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
-  ${statBox(items, c, W, H)}
+  <rect class="card" width="${responsive ? '100%' : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  ${wOpen}${statBox(items, c, W, H)}${wClose}
 </svg>`;
 }
 

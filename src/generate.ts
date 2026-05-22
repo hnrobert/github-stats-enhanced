@@ -71,24 +71,49 @@ export function generateSvgs(
   contribOpts: CardOptions,
   langOpts: CardOptions
 ): void {
+  const withResponsive = !!(statsOpts.responsive || contribOpts.responsive || langOpts.responsive);
+  const fixed = (o: CardOptions): CardOptions => ({ ...o, responsive: false });
+  const resp  = (o: CardOptions): CardOptions => ({ ...o, responsive: true });
+
   const outputs: Array<{ name: string; content: string }> = [
-    { name: "stats1.svg",                 content: generateStatsCard1(langStats, theme, statsOpts) },
-    { name: "stats1-adaptive.svg",        content: generateStatsCard1(langStats, "adaptive", statsOpts) },
-    { name: "stats1-dark.svg",            content: generateStatsCard1(langStats, "dark", statsOpts) },
-    { name: "stats1-light.svg",           content: generateStatsCard1(langStats, "light", statsOpts) },
-    { name: "stats2.svg",                 content: generateStatsCard2(langStats, theme, statsOpts) },
-    { name: "stats2-adaptive.svg",        content: generateStatsCard2(langStats, "adaptive", statsOpts) },
-    { name: "stats2-dark.svg",            content: generateStatsCard2(langStats, "dark", statsOpts) },
-    { name: "stats2-light.svg",           content: generateStatsCard2(langStats, "light", statsOpts) },
-    { name: "contributions.svg",          content: generateContributionsCard(contribStats, theme, contribOpts) },
-    { name: "contributions-adaptive.svg", content: generateContributionsCard(contribStats, "adaptive", contribOpts) },
-    { name: "contributions-dark.svg",     content: generateContributionsCard(contribStats, "dark", contribOpts) },
-    { name: "contributions-light.svg",    content: generateContributionsCard(contribStats, "light", contribOpts) },
-    { name: "languages.svg",              content: generateLanguagesCard(langStats, theme, langOpts) },
-    { name: "languages-adaptive.svg",     content: generateLanguagesCard(langStats, "adaptive", langOpts) },
-    { name: "languages-dark.svg",         content: generateLanguagesCard(langStats, "dark", langOpts) },
-    { name: "languages-light.svg",        content: generateLanguagesCard(langStats, "light", langOpts) },
+    { name: "stats1.svg",                 content: generateStatsCard1(langStats, theme,       fixed(statsOpts)) },
+    { name: "stats1-adaptive.svg",        content: generateStatsCard1(langStats, "adaptive",  fixed(statsOpts)) },
+    { name: "stats1-dark.svg",            content: generateStatsCard1(langStats, "dark",       fixed(statsOpts)) },
+    { name: "stats1-light.svg",           content: generateStatsCard1(langStats, "light",      fixed(statsOpts)) },
+    { name: "stats2.svg",                 content: generateStatsCard2(langStats, theme,       fixed(statsOpts)) },
+    { name: "stats2-adaptive.svg",        content: generateStatsCard2(langStats, "adaptive",  fixed(statsOpts)) },
+    { name: "stats2-dark.svg",            content: generateStatsCard2(langStats, "dark",       fixed(statsOpts)) },
+    { name: "stats2-light.svg",           content: generateStatsCard2(langStats, "light",      fixed(statsOpts)) },
+    { name: "contributions.svg",          content: generateContributionsCard(contribStats, theme,      fixed(contribOpts)) },
+    { name: "contributions-adaptive.svg", content: generateContributionsCard(contribStats, "adaptive", fixed(contribOpts)) },
+    { name: "contributions-dark.svg",     content: generateContributionsCard(contribStats, "dark",      fixed(contribOpts)) },
+    { name: "contributions-light.svg",    content: generateContributionsCard(contribStats, "light",     fixed(contribOpts)) },
+    { name: "languages.svg",              content: generateLanguagesCard(langStats, theme,      fixed(langOpts)) },
+    { name: "languages-adaptive.svg",     content: generateLanguagesCard(langStats, "adaptive", fixed(langOpts)) },
+    { name: "languages-dark.svg",         content: generateLanguagesCard(langStats, "dark",      fixed(langOpts)) },
+    { name: "languages-light.svg",        content: generateLanguagesCard(langStats, "light",     fixed(langOpts)) },
   ];
+
+  if (withResponsive) {
+    outputs.push(
+      { name: "stats1-responsive.svg",                  content: generateStatsCard1(langStats, theme,       resp(statsOpts)) },
+      { name: "stats1-adaptive-responsive.svg",         content: generateStatsCard1(langStats, "adaptive",  resp(statsOpts)) },
+      { name: "stats1-dark-responsive.svg",             content: generateStatsCard1(langStats, "dark",       resp(statsOpts)) },
+      { name: "stats1-light-responsive.svg",            content: generateStatsCard1(langStats, "light",      resp(statsOpts)) },
+      { name: "stats2-responsive.svg",                  content: generateStatsCard2(langStats, theme,       resp(statsOpts)) },
+      { name: "stats2-adaptive-responsive.svg",         content: generateStatsCard2(langStats, "adaptive",  resp(statsOpts)) },
+      { name: "stats2-dark-responsive.svg",             content: generateStatsCard2(langStats, "dark",       resp(statsOpts)) },
+      { name: "stats2-light-responsive.svg",            content: generateStatsCard2(langStats, "light",      resp(statsOpts)) },
+      { name: "contributions-responsive.svg",           content: generateContributionsCard(contribStats, theme,      resp(contribOpts)) },
+      { name: "contributions-adaptive-responsive.svg",  content: generateContributionsCard(contribStats, "adaptive", resp(contribOpts)) },
+      { name: "contributions-dark-responsive.svg",      content: generateContributionsCard(contribStats, "dark",      resp(contribOpts)) },
+      { name: "contributions-light-responsive.svg",     content: generateContributionsCard(contribStats, "light",     resp(contribOpts)) },
+      { name: "languages-responsive.svg",               content: generateLanguagesCard(langStats, theme,      resp(langOpts)) },
+      { name: "languages-adaptive-responsive.svg",      content: generateLanguagesCard(langStats, "adaptive", resp(langOpts)) },
+      { name: "languages-dark-responsive.svg",          content: generateLanguagesCard(langStats, "dark",      resp(langOpts)) },
+      { name: "languages-light-responsive.svg",         content: generateLanguagesCard(langStats, "light",     resp(langOpts)) },
+    );
+  }
 
   for (const { name, content } of outputs) {
     const filePath = path.join(outputDir, name);

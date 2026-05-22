@@ -4,7 +4,7 @@ import { fetchGitHubStats } from "./api/index.ts";
 import { writeStatsYaml, readStatsYaml } from "./data.ts";
 import { generateSvgs, generateReport, generateDemo, filterLanguageStats, filterContributionStats } from "./generate.ts";
 import type { FilterOptions } from "./generate.ts";
-import { getInput, getBoolInput, buildCardOpts, log, setFailed } from "./action/index.ts";
+import { getInput, getBoolInput, buildCardOpts, log, setFailed, appendSummary } from "./action/index.ts";
 import type { Theme } from "./svg/theme.ts";
 
 function parseList(input: string): string[] {
@@ -63,11 +63,51 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           generateReport(langFiltered, outputDir, targetRepo, targetBranch);
           generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
+        const base = `https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}`;
+        const responsive = getBoolInput("responsive");
+        const suffix = responsive ? "-responsive" : "";
         log(`\nREADME usage (adaptive theme):`);
-        log(`  ![Stats1](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats1-adaptive.svg)`);
-        log(`  ![Stats2](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/stats2-adaptive.svg)`);
-        log(`  ![Contributions](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/contributions-adaptive.svg)`);
-        log(`  ![Languages](https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}/languages-adaptive.svg)`);
+        log(`  ![Stats1](${base}/stats1-adaptive${suffix}.svg)`);
+        log(`  ![Stats2](${base}/stats2-adaptive${suffix}.svg)`);
+        log(`  ![Contributions](${base}/contributions-adaptive${suffix}.svg)`);
+        log(`  ![Languages](${base}/languages-adaptive${suffix}.svg)`);
+        const imgSuffix = responsive ? "-responsive" : "";
+        appendSummary([
+          `## GitHub Stats Generated`,
+          ``,
+          `**User:** [${username}](https://github.com/${username})`,
+          `**Branch:** \`${targetBranch}\``,
+          ``,
+          `### Preview`,
+          ``,
+          `<div>`,
+          `<img src="${base}/stats1-adaptive${imgSuffix}.svg" width="22%" alt="Stats 1">`,
+          `<img src="${base}/stats2-adaptive${imgSuffix}.svg" width="22%" alt="Stats 2">`,
+          `<img src="${base}/contributions-adaptive${imgSuffix}.svg" width="51%" alt="Contributions">`,
+          `</div>`,
+          ``,
+          `<img src="${base}/languages-adaptive${imgSuffix}.svg" width="97%" alt="Languages">`,
+          ``,
+          `### README Usage`,
+          ``,
+          `\`\`\`markdown`,
+          `![Stats1](${base}/stats1-adaptive.svg)`,
+          `![Stats2](${base}/stats2-adaptive.svg)`,
+          `![Contributions](${base}/contributions-adaptive.svg)`,
+          `![Languages](${base}/languages-adaptive.svg)`,
+          `\`\`\``,
+          ...(responsive ? [
+            ``,
+            `### README Usage (responsive)`,
+            ``,
+            `\`\`\`markdown`,
+            `![Stats1](${base}/stats1-adaptive-responsive.svg)`,
+            `![Stats2](${base}/stats2-adaptive-responsive.svg)`,
+            `![Contributions](${base}/contributions-adaptive-responsive.svg)`,
+            `![Languages](${base}/languages-adaptive-responsive.svg)`,
+            `\`\`\``,
+          ] : []),
+        ].join("\n"));
       }
     } else if (mode === "generate") {
       if (!fs.existsSync(dataFile)) throw new Error(`data_file not found: ${dataFile}`);

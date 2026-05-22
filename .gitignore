@@ -143,3 +143,4 @@ vite.config.ts.timestamp-*
 
 # Local test output
 output/
+settings.local.json
