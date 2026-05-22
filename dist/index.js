@@ -3116,7 +3116,7 @@ var THEMES = {
   },
   light: {
     bg: "rgba(255,255,255,0.8)",
-    border: "rgba(255,255,255,0.2)",
+    border: "rgba(0,0,0,0.1)",
     textPrimary: "#1f2937",
     textSecondary: "#6b7280",
     accentBlue: "#3b82f6",
@@ -3164,9 +3164,9 @@ var FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-ser
 function svgOpen(w, h, responsive = false, minW) {
   if (responsive) {
     const minStyle = minW ? ` style="min-width:${minW}px"` : "";
-    return `<svg width="100%" height="${h}"${minStyle} xmlns="http://www.w3.org/2000/svg">`;
+    return `<svg width="100%" viewBox="-1 -1 ${w + 2} ${h + 2}"${minStyle} xmlns="http://www.w3.org/2000/svg">`;
   }
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
+  return `<svg width="${w + 2}" height="${h + 2}" viewBox="-1 -1 ${w + 2} ${h + 2}" xmlns="http://www.w3.org/2000/svg">`;
 }
 function responsiveWrap(w, responsive) {
   if (!responsive)
@@ -3305,7 +3305,7 @@ function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
     const [wOpen2, wClose2] = responsiveWrap(W, responsive);
     return `${svgOpen(W, H2, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${bgW}" height="${H2}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <rect class="card" width="${bgW}" height="${H2}" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="0.5"/>
   ${wOpen2}<text x="${W / 2}" y="${H2 / 2 + 5}" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>${wClose2}
 </svg>`;
   }
@@ -3380,7 +3380,7 @@ function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
   const [wOpen, wClose] = responsiveWrap(W, responsive);
   return `${svgOpen(W, H, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
-  <rect class="card" width="${bgW}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
+  <rect class="card" width="${bgW}" height="${H}" rx="10" fill="${c.bg}" stroke="${c.border}" stroke-width="0.5"/>
   ${wOpen}
   <g class="title">
   <text x="${W / 2}" y="${titleY}" fill="${c.textPrimary}" font-size="14" font-weight="600"
@@ -3503,18 +3503,17 @@ function buildReport(stats, baseUrl = ".", treeUrl = ".") {
     `> Powered by [@hnrobert/github-stats-enhanced](https://github.com/hnrobert/github-stats-enhanced)`,
     ``,
     `<div align="center" style="max-width:800px;margin:0 auto">`,
-    card("stats1-dark.svg", "stats1-light.svg", "22%", "Stats 1", "4") + card("stats2-dark.svg", "stats2-light.svg", "22%", "Stats 2", "4") + card("contributions-dark.svg", "contributions-light.svg", "51%", "Contributions", "4"),
+    card("stats1-dark.svg", "stats1-light.svg", "21.75%", "Stats 1", "4") + card("stats2-dark.svg", "stats2-light.svg", "21.75%", "Stats 2", "4") + card("contributions-dark.svg", "contributions-light.svg", "50.5%", "Contributions", "4"),
     ``,
     `<br/>`,
     ``,
-    card("languages-dark.svg", "languages-light.svg", "97%", "Languages"),
+    card("languages-dark.svg", "languages-light.svg", "96.5%", "Languages"),
     `</div>`,
     ``,
     `## Summary`,
     ``,
-    `| | |`,
-    `|---|---|`,
     `| Name | ${u.name ?? u.login} |`,
+    `|---|---|`,
     `| Followers | ${u.followers} |`,
     `| Public Repos | ${u.public_repos} |`,
     `| Total Stars | ${st.totalStars} |`,
@@ -3552,7 +3551,7 @@ function buildReport(stats, baseUrl = ".", treeUrl = ".") {
     lines.push(``);
   }
   return lines.join(`
-`) + `
+`).trimEnd() + `
 `;
 }
 
@@ -4001,8 +4000,7 @@ README usage (adaptive theme):`);
         log(`  ![Stats2](${base}/stats2-adaptive${suffix}.svg)`);
         log(`  ![Contributions](${base}/contributions-adaptive${suffix}.svg)`);
         log(`  ![Languages](${base}/languages-adaptive${suffix}.svg)`);
-        const imgSuffix = responsive ? "-responsive" : "";
-        appendSummary([
+        const summaryLines = [
           `## GitHub Stats Generated`,
           ``,
           `**User:** [${username}](https://github.com/${username})`,
@@ -4011,14 +4009,14 @@ README usage (adaptive theme):`);
           `### Preview`,
           ``,
           `<div>`,
-          `<img src="${base}/stats1-adaptive${imgSuffix}.svg" width="22%" alt="Stats 1">`,
-          `<img src="${base}/stats2-adaptive${imgSuffix}.svg" width="22%" alt="Stats 2">`,
-          `<img src="${base}/contributions-adaptive${imgSuffix}.svg" width="51%" alt="Contributions">`,
+          `<img src="${base}/stats1-adaptive.svg" width="21.75%" alt="Stats 1">`,
+          `<img src="${base}/stats2-adaptive.svg" width="21.75%" alt="Stats 2">`,
+          `<img src="${base}/contributions-adaptive.svg" width="50.5%" alt="Contributions">`,
           `</div>`,
           ``,
-          `<img src="${base}/languages-adaptive${imgSuffix}.svg" width="97%" alt="Languages">`,
+          `<img src="${base}/languages-adaptive.svg" width="96.5%" alt="Languages">`,
           ``,
-          `### README Usage`,
+          `### Markdown Usage`,
           ``,
           `\`\`\`markdown`,
           `![Stats1](${base}/stats1-adaptive.svg)`,
@@ -4026,18 +4024,33 @@ README usage (adaptive theme):`);
           `![Contributions](${base}/contributions-adaptive.svg)`,
           `![Languages](${base}/languages-adaptive.svg)`,
           `\`\`\``,
-          ...responsive ? [
-            ``,
-            `### README Usage (responsive)`,
-            ``,
-            `\`\`\`markdown`,
-            `![Stats1](${base}/stats1-adaptive-responsive.svg)`,
-            `![Stats2](${base}/stats2-adaptive-responsive.svg)`,
-            `![Contributions](${base}/contributions-adaptive-responsive.svg)`,
-            `![Languages](${base}/languages-adaptive-responsive.svg)`,
-            `\`\`\``
-          ] : []
-        ].join(`
+          ``,
+          `### HTML Usage (with dark/light theme support)`,
+          ``,
+          `\`\`\`html`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats1-dark.svg" />`,
+          `  <img src="${base}/stats1-light.svg" width="21.75%" alt="Stats 1" hspace="4" />`,
+          `</picture>`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats2-dark.svg" />`,
+          `  <img src="${base}/stats2-light.svg" width="21.75%" alt="Stats 2" hspace="4" />`,
+          `</picture>`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/contributions-dark.svg" />`,
+          `  <img src="${base}/contributions-light.svg" width="50.5%" alt="Contributions" hspace="4" />`,
+          `</picture>`,
+          `<br/>`,
+          `<picture>`,
+          `  <source media="(prefers-color-scheme: dark)" srcset="${base}/languages-dark.svg" />`,
+          `  <img src="${base}/languages-light.svg" width="96.5%" alt="Languages" />`,
+          `</picture>`,
+          `\`\`\``
+        ];
+        if (responsive) {
+          summaryLines.push(``, `### Markdown Usage (responsive)`, ``, `\`\`\`markdown`, `![Stats1](${base}/stats1-adaptive-responsive.svg)`, `![Stats2](${base}/stats2-adaptive-responsive.svg)`, `![Contributions](${base}/contributions-adaptive-responsive.svg)`, `![Languages](${base}/languages-adaptive-responsive.svg)`, `\`\`\``, ``, `### HTML Usage (responsive, with dark/light theme support)`, ``, `\`\`\`html`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats1-dark-responsive.svg" />`, `  <img src="${base}/stats1-light-responsive.svg" width="21.75%" alt="Stats 1" hspace="4" />`, `</picture>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats2-dark-responsive.svg" />`, `  <img src="${base}/stats2-light-responsive.svg" width="21.75%" alt="Stats 2" hspace="4" />`, `</picture>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/contributions-dark-responsive.svg" />`, `  <img src="${base}/contributions-light-responsive.svg" width="50.5%" alt="Contributions" hspace="4" />`, `</picture>`, `<br/>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/languages-dark-responsive.svg" />`, `  <img src="${base}/languages-light-responsive.svg" width="96.5%" alt="Languages" />`, `</picture>`, `\`\`\``);
+        }
+        appendSummary(summaryLines.join(`
 `));
       }
     } else if (mode === "generate") {
