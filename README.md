@@ -15,16 +15,18 @@ A GitHub Action that generates beautiful SVG stat cards for your GitHub profile 
 
 ## Cards
 
-Each card is generated in three variants: `adaptive`, `dark`, and `light`.
+Each card is generated in three theme variants (`adaptive`, `dark`, `light`) plus a `-responsive` variant (when `responsive: "true"`).
 
 | File | Description |
 |------|-------------|
-| `stats.svg` | Stars, forks, commits, repos, followers (with Octicons icons) |
-| `languages.svg` | Top 8 languages with color-coded progress bars |
-| `contributions.svg` | Yearly breakdown + 26-week activity heatmap |
+| `stats1.svg` | Followers + Total Stars |
+| `stats2.svg` | Public Repos + Contributed Repos |
+| `contributions.svg` | Total commits + yearly breakdown (commits, PRs, issues, reviews) |
+| `languages.svg` | Top languages with color-coded bar and percentage legend |
 
-`stats.svg` / `languages.svg` / `contributions.svg` use the configured `theme` (default: `adaptive`).  
-`*-adaptive.svg`, `*-dark.svg`, `*-light.svg` are always generated regardless of theme.
+`stats1.svg` / `stats2.svg` / `contributions.svg` / `languages.svg` use the configured `theme` (default: `adaptive`).  
+`*-adaptive.svg`, `*-dark.svg`, `*-light.svg` are always generated regardless of theme.  
+`*-responsive.svg` (e.g. `stats1-adaptive-responsive.svg`) are generated when `responsive: "true"` — these use `width="100%"` and scale to the container.
 
 ## Themes
 
@@ -137,26 +139,31 @@ jobs:
 
 ### 3. Use in your README
 
-**Recommended — adaptive (works in all themes automatically):**
+**Recommended — adaptive (auto dark/light, works everywhere):**
 
 ```markdown
-![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-adaptive.svg)
-![Top Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive.svg)
+![Stats 1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats1-adaptive.svg)
+![Stats 2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats2-adaptive.svg)
 ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/contributions-adaptive.svg)
+![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive.svg)
 ```
 
-**Fixed dark/light variants (if you prefer explicit control):**
+**Responsive variants (scale to container width, generated when `responsive: "true"`):**
 
 ```markdown
-![GitHub Stats](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-dark.svg)
+![Stats 1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats1-adaptive-responsive.svg)
+![Stats 2](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats2-adaptive-responsive.svg)
+![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/contributions-adaptive-responsive.svg)
+![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive-responsive.svg)
 ```
+
+**Fixed dark/light variants (explicit control with `<picture>`):**
 
 ```html
-<!-- Manual dark/light switch with <picture> -->
 <picture>
   <source media="(prefers-color-scheme: dark)"
-    srcset="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-dark.svg">
-  <img src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats-light.svg">
+    srcset="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats1-dark.svg">
+  <img src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/stats1-light.svg">
 </picture>
 ```
 
@@ -187,34 +194,46 @@ with:
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `github_user_name` | repo owner | GitHub username to generate stats for. Defaults to `GITHUB_REPOSITORY_OWNER` (the Actions repo owner). |
-| `self_github_token` | — | Personal access token. Takes priority over `GITHUB_TOKEN`. Use for private repos or org stats. |
-| `github_token` | — | Fallback token. The auto-provided `GITHUB_TOKEN` is used if neither token is set. |
+| `github_user_name` | repo owner | GitHub username to generate stats for |
+| `self_github_token` | — | Personal access token. Takes priority over `GITHUB_TOKEN`. Use for private repos or org stats |
+| `github_token` | — | Fallback token. The auto-provided `GITHUB_TOKEN` is used if neither token is set |
 | `mode` | `all` | `all` (fetch + generate), `fetch` (API → stats.yml), `generate` (stats.yml → SVGs) |
 | `output_dir` | `dist` | Output directory for generated SVGs |
 | `theme` | `adaptive` | `adaptive`, `dark`, or `light` |
-| `responsive` | `true` | `true` for `width="100%"`, `false` for fixed pixel dimensions |
+| `responsive` | `true` | Generate `-responsive` suffixed SVGs with `width="100%"`. Fixed-size files are always generated |
 | `exclude_languages` | — | Comma-separated languages to exclude from the languages card |
 | `exclude_repos` | — | Comma-separated `owner/repo` to exclude from language stats |
 | `contrib_exclude_repos` | — | Comma-separated `owner/repo` to exclude from contribution stats only |
 | `weight_contributed_repos` | `true` | Set to `false` to count contributed repo languages at full weight instead of by commit ratio |
 | `languages_count` | `8` | Number of languages to display |
 | `stats_width` | `220` | Stats card width (px) |
-| `stats_height` | `200` | Stats card height (px) |
+| `stats_height` | auto | Stats card height (px). Computed from content if not set |
 | `contributions_width` | `460` | Contributions card width (px) |
-| `contributions_height` | `180` | Contributions card height (px) |
+| `contributions_height` | auto | Contributions card height (px). Computed from content if not set |
 | `languages_width` | `500` | Languages card width (px) |
+| `stats_min_width` | `160` | Minimum width for stats cards in responsive mode (px) |
+| `contributions_min_width` | `280` | Minimum width for contributions card in responsive mode (px) |
+| `languages_min_width` | `300` | Minimum width for languages card in responsive mode (px) |
 | `generate_report` | `true` | Also write `README.md` (stats report) and `index.html` (demo page) |
-| `target_repo` | repo name / username | Repository name where SVGs are stored. Defaults to `GITHUB_REPOSITORY_NAME` env var, then `github_user_name` |
+| `target_repo` | repo name / username | Repository name where SVGs are stored |
 | `target_branch` | `github-stats-enhanced` | Branch where SVGs are pushed and served from |
+| `data_file` | `{output_dir}/stats.yml` | Path to the stats YAML file (used by `fetch` to write, `generate` to read) |
 
 ## Local development
 
 ```bash
 bun install
-# Use SELF_GITHUB_TOKEN for a PAT, or GITHUB_TOKEN for the default token
-SELF_GITHUB_TOKEN=your_pat GITHUB_USER_NAME=your_username bun src/index.ts
+# Fetch stats and generate SVGs to ./output/
+GITHUB_TOKEN=your_token bun scripts/test-local.ts your_username
+
+# Use cached stats (skip API call)
+bun scripts/test-local.ts --from-cache
+
+# Fetch only (no SVG generation)
+GITHUB_TOKEN=your_token bun scripts/test-local.ts your_username --fetch-only
 ```
+
+Open `output/index.html` to preview the generated cards.
 
 ## Build for action deployment
 
