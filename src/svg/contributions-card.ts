@@ -25,7 +25,7 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
   const rowGap        = 12;
   const totalRightH   = titleCapH + titleToGrid + gridItemH + rowGap + gridItemH;
   const vPad          = 28;
-  const H = opts.height ?? Math.ceil(totalRightH + vPad * 2);
+  const H = opts.height ?? 180;
 
   // Left: Total Commits
   const leftCX = halfW / 2;

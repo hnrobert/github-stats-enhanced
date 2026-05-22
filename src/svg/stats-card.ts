@@ -22,9 +22,8 @@ const LABEL_FONT = 13;
 const NUM_LABEL_GAP = 10;
 const ROW_PAD = 24; // vertical padding per row (top+bottom)
 
-function calcStatsHeight(rowCount: number): number {
-  const rowH = NUM_FONT + NUM_LABEL_GAP + LABEL_FONT;
-  return rowH * rowCount + ROW_PAD * rowCount;
+function calcStatsHeight(_rowCount: number): number {
+  return 200;
 }
 
 function statBox(
