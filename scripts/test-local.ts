@@ -76,5 +76,5 @@ const langFiltered    = filterLanguageStats(stats, {});
 const contribFiltered = filterContributionStats(stats, {});
 generateSvgs(langFiltered, contribFiltered, outDir, "adaptive", ro, ro, ro);
 generateReport(langFiltered, outDir);
-generateDemo(langFiltered, outDir);
+generateDemo(langFiltered, outDir, ".", ".");
 console.log(`\nDone — open output/index.html to preview`);

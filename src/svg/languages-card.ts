@@ -3,6 +3,8 @@ import { getColors, getCardStyle, type Theme } from "./theme.ts";
 import { getLangColor } from "./colors.ts";
 import { svgOpen, escapeXml, responsiveWrap, type CardOptions, FONT } from "./helpers.ts";
 
+const LANG_MIN_W = 300;
+
 export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
   const langs = stats.stats.languageStats.slice(0, opts.languageCount ?? 8);
@@ -14,7 +16,7 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
 
   if (langs.length === 0) {
     const [wOpen, wClose] = responsiveWrap(W, responsive);
-    return `${svgOpen(W, 100, responsive)}
+    return `${svgOpen(W, 100, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
   <rect class="card" width="${bgW}" height="100" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${wOpen}<text x="${W / 2}" y="56" fill="${c.textSecondary}" font-size="13" text-anchor="middle" font-family="${FONT}">No language data</text>${wClose}
@@ -109,7 +111,7 @@ export function generateLanguagesCard(stats: GitHubStats, theme: Theme = "adapti
   const H = legendStartY + rows.length * (itemH + rowGap) - rowGap + 20;
   const [wOpen, wClose] = responsiveWrap(W, responsive);
 
-  return `${svgOpen(W, H, responsive)}
+  return `${svgOpen(W, H, responsive, LANG_MIN_W)}
   ${getCardStyle(theme)}
   <rect class="card" width="${bgW}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${wOpen}

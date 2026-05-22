@@ -2,18 +2,33 @@ import type { GitHubStats } from "../api/types.ts";
 import { getColors, getCardStyle, type Theme } from "./theme.ts";
 import { svgOpen, formatNumber, escapeXml, responsiveWrap, type CardOptions, FONT } from "./helpers.ts";
 
+const CONTRIB_MIN_W = 280;
+
 export function generateContributionsCard(stats: GitHubStats, theme: Theme = "adaptive", opts: CardOptions = {}): string {
   const c = getColors(theme);
   const { yearlyContributions: yc, totalCommits } = stats.stats;
 
   const W = opts.width ?? 460;
-  const H = opts.height ?? 180;
   const halfW = W / 2;
 
-  // Left: Total Commits — vertically centered
-  const leftCX = halfW / 2;
   const numFontSize = 28;
   const labelFontSize = 13;
+  const titleFontSize = 13;
+  const gridNumFontSize = 19;
+  const gridLabelFontSize = 11;
+
+  const titleCapH     = titleFontSize * 0.72;
+  const gridNumCapH   = gridNumFontSize * 0.72;
+  const gridLabelCapH = gridLabelFontSize * 0.72;
+  const gridItemH     = gridNumCapH + 6 + gridLabelCapH;
+  const titleToGrid   = 14;
+  const rowGap        = 12;
+  const totalRightH   = titleCapH + titleToGrid + gridItemH + rowGap + gridItemH;
+  const vPad          = 28;
+  const H = opts.height ?? Math.ceil(totalRightH + vPad * 2);
+
+  // Left: Total Commits
+  const leftCX = halfW / 2;
   const numCapH = numFontSize * 0.72;
   const labelCapH = labelFontSize * 0.72;
   const groupH = numCapH + 10 + labelCapH;
@@ -30,25 +45,10 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
     </g>`;
 
   // Right: title + 2x2 grid
-  // Grid uses full right half so col centers are symmetric
-  const rightStart    = halfW;
-  const rightW        = W - rightStart;
-  const titleFontSize = 13;
-  const titleCapH     = titleFontSize * 0.72;
-
-  // Grid layout: title at top, then 2 rows × 2 cols
-  const gridNumFontSize = 19;
-  const gridLabelFontSize = 11;
-  const gridNumCapH = gridNumFontSize * 0.72;
-  const gridLabelCapH = gridLabelFontSize * 0.72;
-  const gridItemH = gridNumCapH + 6 + gridLabelCapH;
-
-  const titleToGrid = 14;
-  const rowGap = 12;
-  const totalRightH = titleCapH + titleToGrid + gridItemH + rowGap + gridItemH;
+  const rightStart = halfW;
+  const rightW     = W - rightStart;
   const rightGroupTop = H / 2 - totalRightH / 2;
-
-  const titleY2 = rightGroupTop + titleCapH;
+  const titleY2    = rightGroupTop + titleCapH;
   const gridStartY = titleY2 + titleToGrid;
 
   const breakdown = [
@@ -58,10 +58,11 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
     { label: "Reviews", value: formatNumber(yc.reviews) },
   ];
 
-  const cellW = rightW / 2;
+  const cellW  = rightW / 2;
   const col0CX = rightStart + cellW / 2;
   const col1CX = rightStart + cellW + cellW / 2;
   const gridCX = (col0CX + col1CX) / 2;
+
   const gridCells = breakdown.map((item, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
@@ -93,9 +94,10 @@ export function generateContributionsCard(stats: GitHubStats, theme: Theme = "ad
   const responsive = !!(opts.responsive);
   const [wOpen, wClose] = responsiveWrap(W, responsive);
 
-  return `${svgOpen(W, H, responsive)}
+  return `${svgOpen(W, H, responsive, CONTRIB_MIN_W)}
   ${getCardStyle(theme)}
   <rect class="card" width="${responsive ? '100%' : W}" height="${H}" rx="16" fill="${c.bg}" stroke="${c.border}" stroke-width="1"/>
   ${wOpen}${divider}${leftSection}${rightSection}${wClose}
 </svg>`;
 }
+
