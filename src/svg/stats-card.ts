@@ -37,8 +37,9 @@ function statBox(
   const groupH = NUM_FONT + NUM_LABEL_GAP + LABEL_FONT;
 
   return items.map((item, i) => {
-    const cy = (i + 0.5) * (H / items.length);
-    const groupTop = cy - groupH / 2;
+    const n = items.length;
+    const gap = (H - n * groupH) / (n + 1);
+    const groupTop = gap * (i + 1) + groupH * i;
     const numCY = groupTop + NUM_FONT / 2;
     const labelCY = groupTop + NUM_FONT + NUM_LABEL_GAP + LABEL_FONT / 2;
     const iconTop = numCY - iconSize / 2;
