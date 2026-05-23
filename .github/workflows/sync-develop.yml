@@ -10,7 +10,7 @@ jobs:
   sync-develop:
     name: Sync develop branch with main
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.actor != 'github-actions[bot]'
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
 
