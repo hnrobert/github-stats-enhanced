@@ -74,6 +74,7 @@ export async function fetchGitHubStats(
   const totalCommitsMap   = new Map<string, number>();
   const userCommitsOwnMap = new Map<string, number>();
   let fetchCount = 0, cacheCount = 0;
+  const fetchedRepos: string[] = [];
   await Promise.all([
     ...Array.from(allRepoKeys).map(async (key) => {
       const pushedAt   = pushedAtMap.get(key);
@@ -83,6 +84,7 @@ export async function fetchGitHubStats(
       const slash = key.indexOf("/");
       const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
       totalCommitsMap.set(key, count); fetchCount++;
+      fetchedRepos.push(key);
     }),
     ...ownRepos.map(async (r) => {
       const key        = `${r.owner.login}/${r.name}`;
@@ -95,6 +97,9 @@ export async function fetchGitHubStats(
     }),
   ]);
   console.log(`📦 Repo commit counts: ${fetchCount} fetched, ${cacheCount} from cache (${allRepoKeys.size} total)`);
+  if (fetchedRepos.length > 0) {
+    for (const key of fetchedRepos.sort()) console.log(`   ↳ ${key}`);
+  }
   console.log(`🌐 Total API requests this run: ${getRequestCount()}`);
 
   // Build commitMap: own repos use REST all-time counts; contributed repos use last-year counts
