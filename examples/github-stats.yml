@@ -20,10 +20,16 @@
 #   ![Contributions](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/contributions-adaptive-responsive.svg)
 #   ![Languages](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/YOUR_BRANCH/languages-adaptive-responsive.svg)
 #
-# Pipeline modes:
+# Pipeline modes (mode):
 #   mode: "all"      — fetch from GitHub API + generate SVGs in one step (default)
 #   mode: "fetch"    — fetch from GitHub API and save to stats.yml only
 #   mode: "generate" — read stats.yml and generate SVGs only (no API call)
+#
+# Fetch strategy (fetch_mode, applies when mode is "all" or "fetch"):
+#   fetch_mode: "full"        — re-fetch commit counts for all repos (default)
+#   fetch_mode: "incremental" — reuse cached per-repo commit counts from data_file;
+#                               only fetches repos not present in the previous stats.yml.
+#                               Pair with actions/cache to persist stats.yml between runs.
 
 name: GitHub Stats
 
@@ -53,6 +59,18 @@ jobs:
     steps:
       - uses: actions/checkout@main
 
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Restore stats cache
+        uses: actions/cache@v4
+        with:
+          path: dist/stats.yml  # must match output_dir + "/stats.yml" (or data_file if set)
+          key: github-stats-${{ github.repository_owner }}-${{ steps.date.outputs.date }}
+          restore-keys: |
+            github-stats-${{ github.repository_owner }}-
+
       - name: Generate GitHub Stats SVGs
         uses: hnrobert/github-stats-enhanced@main
         with:
@@ -63,6 +81,11 @@ jobs:
 
           # Pipeline mode: "all" | "fetch" | "generate"
           mode: "all"
+
+          # Fetch strategy: "incremental" (default) | "full"
+          # "incremental" reuses cached per-repo commit counts from dist/stats.yml
+          # (restored above); only fetches new repos. Falls back to full fetch if no cache.
+          # fetch_mode: "incremental"
 
           # Output directory for generated SVG files
           output_dir: dist
@@ -113,43 +136,35 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ── Option B: two-step (fetch → generate) ────────────────────────────────────
-# Useful when you want to cache stats.yml and regenerate cards without re-fetching.
+# ── Option B: generate-only from cached stats.yml ────────────────────────────
+# Use this when you only want to regenerate SVGs (e.g. theme change) without
+# re-fetching from the API. Requires a prior run to have populated the cache.
 #
 # jobs:
-#   fetch:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@main
-#       - name: Fetch GitHub Stats
-#         uses: hnrobert/github-stats-enhanced@main
-#         with:
-#           github_user_name: ${{ github.repository_owner }}
-#           github_token: ${{ secrets.GITHUB_TOKEN }}
-#           mode: "fetch"
-#           data_file: dist/stats.yml
-#           output_dir: dist
-#       - uses: actions/upload-artifact@v4
-#         with:
-#           name: stats-data
-#           path: dist/stats.yml
-#
 #   generate:
-#     needs: fetch
 #     runs-on: ubuntu-latest
 #     permissions:
 #       contents: write
 #     steps:
 #       - uses: actions/checkout@main
-#       - uses: actions/download-artifact@v4
+#
+#       - name: Get current date
+#         id: date
+#         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+#
+#       - name: Restore stats cache
+#         uses: actions/cache@v4
 #         with:
-#           name: stats-data
-#           path: dist
-#       - name: Generate SVGs from stats.yml
+#           path: dist/stats.yml
+#           key: github-stats-${{ github.repository_owner }}-${{ steps.date.outputs.date }}
+#           restore-keys: |
+#             github-stats-${{ github.repository_owner }}-
+#
+#       - name: Generate SVGs from cached stats.yml
 #         uses: hnrobert/github-stats-enhanced@main
 #         with:
 #           github_user_name: ${{ github.repository_owner }}
-#           mode: "generate"
+#           mode: "generate"          # reads dist/stats.yml restored from cache above
 #           data_file: dist/stats.yml
 #           output_dir: dist
 #           theme: adaptive
@@ -157,6 +172,7 @@ jobs:
 #           # exclude_languages: "HTML,CSS"
 #           # exclude_repos: "your-username/some-repo"
 #           # contrib_exclude_repos: "your-username/some-repo"
+#
 #       - uses: crazy-max/ghaction-github-pages@v5
 #         with:
 #           target_branch: github-stats-enhanced

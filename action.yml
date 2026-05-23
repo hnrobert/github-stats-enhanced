@@ -22,6 +22,10 @@ inputs:
     description: "Pipeline mode: 'all' (fetch + generate), 'fetch' (API → stats.yml only), 'generate' (stats.yml → SVGs only)"
     required: false
     default: "all"
+  fetch_mode:
+    description: "Fetch strategy when mode is 'all' or 'fetch': 'full' (re-fetch all repos) or 'incremental' (reuse cached per-repo commit counts from data_file, only fetch new repos)"
+    required: false
+    default: "incremental"
   data_file:
     description: "Path to the stats YAML file (used by fetch to write, generate to read)"
     required: false

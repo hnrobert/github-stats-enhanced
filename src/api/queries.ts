@@ -20,6 +20,7 @@ export const CONTRIBUTIONS_QUERY = `
         commitContributionsByRepository(maxRepositories: 100) {
           repository {
             name
+            pushedAt
             owner { login }
             languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
               edges { size node { name } }
@@ -39,6 +40,7 @@ export const REPOS_PAGE_QUERY = `
         pageInfo { hasNextPage endCursor }
         nodes {
           name
+          pushedAt
           stargazerCount
           forkCount
           owner { login }

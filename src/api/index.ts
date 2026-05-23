@@ -1,4 +1,4 @@
-import { graphql, fetchUser, fetchAllRepos, fetchYearCommits, fetchCommitCount } from "./client.ts";
+import { graphql, fetchUser, fetchAllRepos, fetchYearCommits, fetchCommitCount, getRequestCount, resetRequestCount } from "./client.ts";
 import { CONTRIBUTIONS_QUERY } from "./queries.ts";
 import type {
   GitHubStats,
@@ -13,8 +13,23 @@ export type { GitHubStats, LanguageStat, RepoInfo, YearlyContributions } from ".
 export async function fetchGitHubStats(
   token: string,
   username: string,
-  weightContributed = true
+  weightContributed = true,
+  cachedStats?: GitHubStats
 ): Promise<GitHubStats> {
+  resetRequestCount();
+  // Reuse cached commit counts for repos with no pushes since the last run;
+  // re-fetch only repos pushed after generatedAt (or repos not in the cache).
+  const cachedRepoMap = new Map<string, { userCommits: number; totalCommits: number }>();
+  const generatedAt = cachedStats?.generatedAt ? new Date(cachedStats.generatedAt) : null;
+  if (cachedStats) {
+    for (const repo of cachedStats.repos) {
+      cachedRepoMap.set(`${repo.owner}/${repo.name}`, {
+        userCommits: repo.userCommits,
+        totalCommits: repo.totalCommits,
+      });
+    }
+  }
+
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
@@ -46,21 +61,47 @@ export async function fetchGitHubStats(
     allRepoKeys.add(`${cr.repository.owner.login}/${cr.repository.name}`);
   }
 
-  // Fetch total commits for all repos + user's own all-time commits for own repos (parallel)
+  // pushedAt map for all repos (own + contributed) — used to decide whether cached counts are still valid
+  const pushedAtMap = new Map<string, Date>();
+  for (const r of ownRepos) pushedAtMap.set(`${r.owner.login}/${r.name}`, new Date(r.pushedAt));
+  for (const cr of lastYear.commitContributionsByRepository) {
+    pushedAtMap.set(`${cr.repository.owner.login}/${cr.repository.name}`, new Date(cr.repository.pushedAt));
+  }
+
+  // Fetch total commits for all repos + user's own all-time commits for own repos (parallel).
+  // Skip fetchCommitCount when: repo has a cached value AND no push since generatedAt.
+  // Own repos fall back to cachedRepoMap; contributed repos fall back to repoTotalCommits.
   const totalCommitsMap   = new Map<string, number>();
   const userCommitsOwnMap = new Map<string, number>();
+  let commitApiCalls = 0, cacheCount = 0;
+  const fetchedRepos: string[] = [];
   await Promise.all([
     ...Array.from(allRepoKeys).map(async (key) => {
+      const pushedAt   = pushedAtMap.get(key);
+      const notUpdated = generatedAt && pushedAt && pushedAt <= generatedAt;
+      const cached     = cachedRepoMap.get(key)?.totalCommits ?? cachedStats?.repoTotalCommits?.[key];
+      if (notUpdated && cached !== undefined) { totalCommitsMap.set(key, cached); cacheCount++; return; }
       const slash = key.indexOf("/");
       const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
-      totalCommitsMap.set(key, count);
+      totalCommitsMap.set(key, count); commitApiCalls++;
+      fetchedRepos.push(key);
     }),
     ...ownRepos.map(async (r) => {
-      const key   = `${r.owner.login}/${r.name}`;
+      const key        = `${r.owner.login}/${r.name}`;
+      const pushedAt   = pushedAtMap.get(key);
+      const notUpdated = generatedAt && pushedAt && pushedAt <= generatedAt;
+      const cached     = cachedRepoMap.get(key)?.userCommits;
+      if (notUpdated && cached !== undefined) { userCommitsOwnMap.set(key, cached); return; }
       const count = await fetchCommitCount(token, r.owner.login, r.name);
-      userCommitsOwnMap.set(key, count);
+      userCommitsOwnMap.set(key, count); commitApiCalls++;
     }),
   ]);
+  const reposFetched = fetchedRepos.length;
+  console.log(`📦 Repos: ${allRepoKeys.size} total — ${reposFetched} re-fetched, ${cacheCount} cached | fetchCommitCount calls: ${commitApiCalls}`);
+  if (reposFetched > 0) {
+    for (const key of fetchedRepos.sort()) console.log(`   ↳ ${key}`);
+  }
+  console.log(`🌐 Total API requests this run: ${getRequestCount()}`);
 
   // Build commitMap: own repos use REST all-time counts; contributed repos use last-year counts
   const commitMap = new Map<string, { userCommits: number; totalCommits: number }>();
@@ -135,6 +176,7 @@ export async function fetchGitHubStats(
     .sort((a, b) => b.stars - a.stars);
 
   return {
+    repoTotalCommits: Object.fromEntries(totalCommitsMap),
     user: {
       login:        userData.login,
       name:         userData.name,

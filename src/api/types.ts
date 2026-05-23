@@ -25,6 +25,8 @@ export interface YearlyContributions {
 }
 
 export interface GitHubStats {
+  generatedAt?: string;
+  repoTotalCommits?: Record<string, number>;
   user: {
     login: string;
     name: string | null;
@@ -56,6 +58,7 @@ export interface RawLanguageEdge {
 
 export interface RawRepo {
   name: string;
+  pushedAt: string;
   stargazerCount: number;
   forkCount: number;
   owner: { login: string };
@@ -70,6 +73,7 @@ export interface RawRepoPage {
 export interface RawCommitContribution {
   repository: {
     name: string;
+    pushedAt: string;
     nameWithOwner?: string;
     owner: { login: string };
     languages: { edges: RawLanguageEdge[] };

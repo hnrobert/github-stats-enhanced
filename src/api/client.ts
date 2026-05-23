@@ -12,12 +12,21 @@ const HEADERS = (token: string) => ({
   "User-Agent": "github-stats-enhanced",
 });
 
+let _requestCount = 0;
+export function getRequestCount() { return _requestCount; }
+export function resetRequestCount() { _requestCount = 0; }
+
+function countedFetch(url: string, init?: RequestInit): Promise<Response> {
+  _requestCount++;
+  return fetch(url, init);
+}
+
 export async function graphql<T>(
   token: string,
   query: string,
   variables: Record<string, unknown>
 ): Promise<T> {
-  const res = await fetch("https://api.github.com/graphql", {
+  const res = await countedFetch("https://api.github.com/graphql", {
     method: "POST",
     headers: HEADERS(token),
     body: JSON.stringify({ query, variables }),
@@ -33,7 +42,7 @@ export async function graphql<T>(
 }
 
 export async function fetchUser(token: string, username: string): Promise<RawUserResponse> {
-  const res = await fetch(`https://api.github.com/users/${username}`, {
+  const res = await countedFetch(`https://api.github.com/users/${username}`, {
     headers: { ...HEADERS(token), Accept: "application/vnd.github.v3+json" },
   });
   if (!res.ok) throw new Error(`Failed to fetch user: ${res.status}`);
@@ -55,7 +64,7 @@ export async function fetchAllRepos(token: string, username: string): Promise<Ra
 export async function fetchCommitCount(
   token: string, owner: string, repo: string
 ): Promise<number> {
-  const res = await fetch(
+  const res = await countedFetch(
     `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`,
     { headers: HEADERS(token) }
   );
@@ -73,8 +82,8 @@ export async function fetchUserCommitCount(
   const searchHeaders = { ...HEADERS(token), Accept: "application/vnd.github+json" };
   const base = `https://api.github.com/search/commits?per_page=1&q=${encodeURIComponent(`repo:${owner}/${repo}`)}`;
   const [authorRes, coAuthorRes] = await Promise.all([
-    fetch(`${base}+author:${encodeURIComponent(username)}`,    { headers: searchHeaders }),
-    fetch(`${base}+co-author:${encodeURIComponent(username)}`, { headers: searchHeaders }),
+    countedFetch(`${base}+author:${encodeURIComponent(username)}`,    { headers: searchHeaders }),
+    countedFetch(`${base}+co-author:${encodeURIComponent(username)}`, { headers: searchHeaders }),
   ]);
   const authorCount   = authorRes.ok   ? ((await authorRes.json()   as { total_count?: number }).total_count ?? 0) : 0;
   const coAuthorCount = coAuthorRes.ok ? ((await coAuthorRes.json() as { total_count?: number }).total_count ?? 0) : 0;

@@ -44,11 +44,19 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
       if (!username) throw new Error("github_user_name is required");
       if (!token)    throw new Error("GITHUB_TOKEN is required");
 
-      log(`📊 Fetching GitHub stats for: ${username}`);
+      const fetchMode = getInput("fetch_mode") || "incremental";
+      let cachedStats = undefined;
+      if (fetchMode === "incremental" && fs.existsSync(dataFile)) {
+        log(`📄 Loading cached stats from ${dataFile}`);
+        cachedStats = readStatsYaml(dataFile);
+        if (cachedStats.generatedAt) log(`📅 Cache generated at: ${cachedStats.generatedAt}`);
+      }
+
+      log(`📊 Fetching GitHub stats for: ${username}${fetchMode === "incremental" ? " (incremental)" : ""}`);
       const weightContributed = getInput("weight_contributed_repos").toLowerCase() !== "false";
       const targetRepo   = getInput("target_repo") || process.env.GITHUB_REPOSITORY_NAME || username;
       const targetBranch = getInput("target_branch") || "github-stats-enhanced";
-      const stats = await fetchGitHubStats(token, username, weightContributed);
+      const stats = await fetchGitHubStats(token, username, weightContributed, cachedStats);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
 
       writeStatsYaml(dataFile, stats);
@@ -64,6 +72,8 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
         const base = `https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}`;
+        const branchUrl = `https://github.com/${username}/${targetRepo}/tree/${targetBranch}`;
+        const reportUrl = `https://github.com/${username}/${targetRepo}/blob/${targetBranch}/README.md`;
         const responsive = getBoolInput("responsive");
         const suffix = responsive ? "-responsive" : "";
         log(`\nREADME usage (adaptive theme):`);
@@ -75,7 +85,8 @@ function readFilterOptions(): { langFilter: FilterOptions; contribFilter: Filter
           `## GitHub Stats Generated`,
           ``,
           `**User:** [${username}](https://github.com/${username})`,
-          `**Branch:** \`${targetBranch}\``,
+          `**Target Branch:** [\`${targetBranch}\`](${branchUrl})`,
+          `**Report:** [README.md](${reportUrl})`,
           ``,
           `### Preview`,
           ``,
