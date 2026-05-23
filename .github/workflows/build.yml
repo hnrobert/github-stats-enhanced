@@ -9,6 +9,7 @@ on:
       - "package.json"
       - "bun.lock"
       - "tsconfig.json"
+      - ".github/workflows/build.yml"
 
 jobs:
   build:
