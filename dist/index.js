@@ -195,6 +195,7 @@ var CONTRIBUTIONS_QUERY = `
         commitContributionsByRepository(maxRepositories: 100) {
           repository {
             name
+            pushedAt
             owner { login }
             languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
               edges { size node { name } }
@@ -213,6 +214,7 @@ var REPOS_PAGE_QUERY = `
         pageInfo { hasNextPage endCursor }
         nodes {
           name
+          pushedAt
           stargazerCount
           forkCount
           owner { login }
@@ -244,8 +246,19 @@ var HEADERS = (token) => ({
   "Content-Type": "application/json",
   "User-Agent": "github-stats-enhanced"
 });
+var _requestCount = 0;
+function getRequestCount() {
+  return _requestCount;
+}
+function resetRequestCount() {
+  _requestCount = 0;
+}
+function countedFetch(url, init) {
+  _requestCount++;
+  return fetch(url, init);
+}
 async function graphql(token, query, variables) {
-  const res = await fetch("https://api.github.com/graphql", {
+  const res = await countedFetch("https://api.github.com/graphql", {
     method: "POST",
     headers: HEADERS(token),
     body: JSON.stringify({ query, variables })
@@ -263,7 +276,7 @@ ${text}`);
   return body.data;
 }
 async function fetchUser(token, username) {
-  const res = await fetch(`https://api.github.com/users/${username}`, {
+  const res = await countedFetch(`https://api.github.com/users/${username}`, {
     headers: { ...HEADERS(token), Accept: "application/vnd.github.v3+json" }
   });
   if (!res.ok)
@@ -282,7 +295,7 @@ async function fetchAllRepos(token, username) {
   return repos;
 }
 async function fetchCommitCount(token, owner, repo) {
-  const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`, { headers: HEADERS(token) });
+  const res = await countedFetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`, { headers: HEADERS(token) });
   if (!res.ok)
     return 0;
   const link = res.headers.get("link") ?? "";
@@ -300,7 +313,18 @@ async function fetchYearCommits(token, username, year) {
 }
 
 // src/api/index.ts
-async function fetchGitHubStats(token, username, weightContributed = true) {
+async function fetchGitHubStats(token, username, weightContributed = true, cachedStats) {
+  resetRequestCount();
+  const cachedRepoMap = new Map;
+  const generatedAt = cachedStats?.generatedAt ? new Date(cachedStats.generatedAt) : null;
+  if (cachedStats) {
+    for (const repo of cachedStats.repos) {
+      cachedRepoMap.set(`${repo.owner}/${repo.name}`, {
+        userCommits: repo.userCommits,
+        totalCommits: repo.totalCommits
+      });
+    }
+  }
   const oneYearAgo = new Date;
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const [userData, data, ownRepos] = await Promise.all([
@@ -325,20 +349,53 @@ async function fetchGitHubStats(token, username, weightContributed = true) {
   for (const cr of lastYear.commitContributionsByRepository) {
     allRepoKeys.add(`${cr.repository.owner.login}/${cr.repository.name}`);
   }
+  const pushedAtMap = new Map;
+  for (const r of ownRepos)
+    pushedAtMap.set(`${r.owner.login}/${r.name}`, new Date(r.pushedAt));
+  for (const cr of lastYear.commitContributionsByRepository) {
+    pushedAtMap.set(`${cr.repository.owner.login}/${cr.repository.name}`, new Date(cr.repository.pushedAt));
+  }
   const totalCommitsMap = new Map;
   const userCommitsOwnMap = new Map;
+  let commitApiCalls = 0, cacheCount = 0;
+  const fetchedRepos = [];
   await Promise.all([
     ...Array.from(allRepoKeys).map(async (key) => {
+      const pushedAt = pushedAtMap.get(key);
+      const notUpdated = generatedAt && pushedAt && pushedAt <= generatedAt;
+      const cached = cachedRepoMap.get(key)?.totalCommits ?? cachedStats?.repoTotalCommits?.[key];
+      if (notUpdated && cached !== undefined) {
+        totalCommitsMap.set(key, cached);
+        cacheCount++;
+        return;
+      }
       const slash = key.indexOf("/");
       const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
       totalCommitsMap.set(key, count);
+      commitApiCalls++;
+      fetchedRepos.push(key);
     }),
     ...ownRepos.map(async (r) => {
       const key = `${r.owner.login}/${r.name}`;
+      const pushedAt = pushedAtMap.get(key);
+      const notUpdated = generatedAt && pushedAt && pushedAt <= generatedAt;
+      const cached = cachedRepoMap.get(key)?.userCommits;
+      if (notUpdated && cached !== undefined) {
+        userCommitsOwnMap.set(key, cached);
+        return;
+      }
       const count = await fetchCommitCount(token, r.owner.login, r.name);
       userCommitsOwnMap.set(key, count);
+      commitApiCalls++;
     })
   ]);
+  const reposFetched = fetchedRepos.length;
+  console.log(`\uD83D\uDCE6 Repos: ${allRepoKeys.size} total — ${reposFetched} re-fetched, ${cacheCount} cached | fetchCommitCount calls: ${commitApiCalls}`);
+  if (reposFetched > 0) {
+    for (const key of fetchedRepos.sort())
+      console.log(`   ↳ ${key}`);
+  }
+  console.log(`\uD83C\uDF10 Total API requests this run: ${getRequestCount()}`);
   const commitMap = new Map;
   for (const r of ownRepos) {
     const key = `${r.owner.login}/${r.name}`;
@@ -404,6 +461,7 @@ async function fetchGitHubStats(token, username, weightContributed = true) {
     };
   }).sort((a, b) => b.stars - a.stars);
   return {
+    repoTotalCommits: Object.fromEntries(totalCommitsMap),
     user: {
       login: userData.login,
       name: userData.name,
@@ -3091,7 +3149,7 @@ function statsFromYaml(yaml) {
   return load(yaml);
 }
 function writeStatsYaml(filePath, stats) {
-  writeFileSync(filePath, statsToYaml(stats), "utf-8");
+  writeFileSync(filePath, statsToYaml({ ...stats, generatedAt: new Date().toISOString() }), "utf-8");
 }
 function readStatsYaml(filePath) {
   return statsFromYaml(readFileSync(filePath, "utf-8"));
@@ -3314,10 +3372,11 @@ function generateLanguagesCard(stats, theme = "adaptive", opts = {}) {
   const barH = 8;
   const totalPct = langs.reduce((s, l) => s + l.percentage, 0);
   let barCursor = padX;
-  const barSegments = langs.map((lang) => {
+  const barSegments = langs.map((lang, i2) => {
     const color = getLangColor(lang.language);
     const normalizedPct = totalPct > 0 ? lang.percentage / totalPct * 100 : 0;
-    const segW = Math.max(2, Math.round(normalizedPct / 100 * innerW));
+    const isLast = i2 === langs.length - 1;
+    const segW = isLast ? padX + innerW - barCursor : Math.max(2, Math.round(normalizedPct / 100 * innerW));
     const seg = `<rect x="${barCursor}" y="${barY}" width="${segW}" height="${barH}" fill="${color}"/>`;
     barCursor += segW;
     return seg;
@@ -3495,6 +3554,23 @@ function buildReport(stats, baseUrl = ".", treeUrl = ".") {
     const filled = Math.round(pct / 100 * width);
     return "█".repeat(filled) + "░".repeat(width - filled);
   };
+  const langRepoMap = new Map;
+  for (const lang of st.languageStats) {
+    const entries = [];
+    for (const r of stats.repos) {
+      const match = r.languages.find((l) => l.name === lang.language);
+      if (!match)
+        continue;
+      entries.push({
+        repo: `${r.owner}/${r.name}`,
+        size: match.size,
+        pct: lang.count > 0 ? Math.round(match.size / lang.count * 1e4) / 100 : 0,
+        repoPct: match.percentage
+      });
+    }
+    entries.sort((a, b) => b.size - a.size);
+    langRepoMap.set(lang.language, { entries: entries.slice(0, 10), total: entries.length });
+  }
   const lines = [
     `# GitHub Stats Report — ${u.login}`,
     ``,
@@ -3526,14 +3602,28 @@ function buildReport(stats, baseUrl = ".", treeUrl = ".") {
     `| Reviews (last year) | ${st.yearlyContributions.reviews} |`,
     ``,
     `## Language Breakdown (weighted across all repos)`,
-    ``,
-    `| Language | Bytes (weighted) | % | Distribution |`,
-    `|---|---|---|---|`,
-    ...st.languageStats.map((l) => `| ${l.language} | ${Math.round(l.count).toLocaleString()} | ${l.percentage.toFixed(2)}% | \`${bar(l.percentage)}\` |`),
-    ``,
-    `## Repositories (${stats.repos.length} scanned)`,
     ``
   ];
+  for (const l of st.languageStats) {
+    lines.push(`### ${l.language} — ${l.percentage.toFixed(2)}% \`${bar(l.percentage)}\``);
+    lines.push(``);
+    lines.push(`**${Math.round(l.count).toLocaleString()} bytes** (weighted)`);
+    const { entries: topRepos, total } = langRepoMap.get(l.language) ?? { entries: [], total: 0 };
+    if (topRepos.length > 0) {
+      const heading = total > 10 ? `Top 10 repos (of ${total})` : `Repos (${total})`;
+      lines.push(``);
+      lines.push(`#### ${heading}`);
+      lines.push(``);
+      lines.push(`| Repo | Bytes | % in repo | % of language |`);
+      lines.push(`|---|---|---|---|`);
+      for (const r of topRepos) {
+        lines.push(`| [${r.repo}](https://github.com/${r.repo}) | ${r.size.toLocaleString()} | ${r.repoPct.toFixed(1)}% | ${r.pct.toFixed(1)}% |`);
+      }
+    }
+    lines.push(``);
+  }
+  lines.push(`## Repositories (${stats.repos.length} scanned)`);
+  lines.push(``);
   for (const r of stats.repos) {
     lines.push(`### [${r.owner}/${r.name}](https://github.com/${r.owner}/${r.name})`);
     lines.push(``);
@@ -3974,11 +4064,19 @@ function readFilterOptions() {
         throw new Error("github_user_name is required");
       if (!token)
         throw new Error("GITHUB_TOKEN is required");
-      log(`\uD83D\uDCCA Fetching GitHub stats for: ${username}`);
+      const fetchMode = getInput("fetch_mode") || "incremental";
+      let cachedStats = undefined;
+      if (fetchMode === "incremental" && fs3.existsSync(dataFile)) {
+        log(`\uD83D\uDCC4 Loading cached stats from ${dataFile}`);
+        cachedStats = readStatsYaml(dataFile);
+        if (cachedStats.generatedAt)
+          log(`\uD83D\uDCC5 Cache generated at: ${cachedStats.generatedAt}`);
+      }
+      log(`\uD83D\uDCCA Fetching GitHub stats for: ${username}${fetchMode === "incremental" ? " (incremental)" : ""}`);
       const weightContributed = getInput("weight_contributed_repos").toLowerCase() !== "false";
       const targetRepo = getInput("target_repo") || process.env.GITHUB_REPOSITORY_NAME || username;
       const targetBranch = getInput("target_branch") || "github-stats-enhanced";
-      const stats = await fetchGitHubStats(token, username, weightContributed);
+      const stats = await fetchGitHubStats(token, username, weightContributed, cachedStats);
       log(`✅ Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
       writeStatsYaml(dataFile, stats);
       log(`\uD83D\uDCC4 Stats saved to ${dataFile}`);
@@ -3992,6 +4090,8 @@ function readFilterOptions() {
           generateDemo(langFiltered, outputDir, targetRepo, targetBranch);
         }
         const base = `https://raw.githubusercontent.com/${username}/${targetRepo}/${targetBranch}`;
+        const branchUrl = `https://github.com/${username}/${targetRepo}/tree/${targetBranch}`;
+        const reportUrl = `https://github.com/${username}/${targetRepo}/blob/${targetBranch}/README.md`;
         const responsive = getBoolInput("responsive");
         const suffix = responsive ? "-responsive" : "";
         log(`
@@ -4004,17 +4104,20 @@ README usage (adaptive theme):`);
           `## GitHub Stats Generated`,
           ``,
           `**User:** [${username}](https://github.com/${username})`,
-          `**Branch:** \`${targetBranch}\``,
+          `**Target Branch:** [\`${targetBranch}\`](${branchUrl})`,
+          `**Report:** [README.md](${reportUrl})`,
           ``,
           `### Preview`,
           ``,
-          `<div>`,
-          `<img src="${base}/stats1-adaptive.svg" width="21.75%" alt="Stats 1">`,
-          `<img src="${base}/stats2-adaptive.svg" width="21.75%" alt="Stats 2">`,
-          `<img src="${base}/contributions-adaptive.svg" width="50.5%" alt="Contributions">`,
-          `</div>`,
+          `<div align="center" style="max-width:800px;margin:0 auto">`,
+          `<img src="${base}/stats1-adaptive.svg" width="21.75%" alt="Stats 1" hspace="4">`,
+          `<img src="${base}/stats2-adaptive.svg" width="21.75%" alt="Stats 2" hspace="4">`,
+          `<img src="${base}/contributions-adaptive.svg" width="50.5%" alt="Contributions" hspace="4">`,
+          ``,
+          `<br/>`,
           ``,
           `<img src="${base}/languages-adaptive.svg" width="96.5%" alt="Languages">`,
+          `</div>`,
           ``,
           `### Markdown Usage`,
           ``,
@@ -4028,6 +4131,7 @@ README usage (adaptive theme):`);
           `### HTML Usage (with dark/light theme support)`,
           ``,
           `\`\`\`html`,
+          `<div align="center" style="max-width:800px;margin:0 auto">`,
           `<picture>`,
           `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats1-dark.svg" />`,
           `  <img src="${base}/stats1-light.svg" width="21.75%" alt="Stats 1" hspace="4" />`,
@@ -4040,15 +4144,18 @@ README usage (adaptive theme):`);
           `  <source media="(prefers-color-scheme: dark)" srcset="${base}/contributions-dark.svg" />`,
           `  <img src="${base}/contributions-light.svg" width="50.5%" alt="Contributions" hspace="4" />`,
           `</picture>`,
+          ``,
           `<br/>`,
+          ``,
           `<picture>`,
           `  <source media="(prefers-color-scheme: dark)" srcset="${base}/languages-dark.svg" />`,
           `  <img src="${base}/languages-light.svg" width="96.5%" alt="Languages" />`,
           `</picture>`,
+          `</div>`,
           `\`\`\``
         ];
         if (responsive) {
-          summaryLines.push(``, `### Markdown Usage (responsive)`, ``, `\`\`\`markdown`, `![Stats1](${base}/stats1-adaptive-responsive.svg)`, `![Stats2](${base}/stats2-adaptive-responsive.svg)`, `![Contributions](${base}/contributions-adaptive-responsive.svg)`, `![Languages](${base}/languages-adaptive-responsive.svg)`, `\`\`\``, ``, `### HTML Usage (responsive, with dark/light theme support)`, ``, `\`\`\`html`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats1-dark-responsive.svg" />`, `  <img src="${base}/stats1-light-responsive.svg" width="21.75%" alt="Stats 1" hspace="4" />`, `</picture>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats2-dark-responsive.svg" />`, `  <img src="${base}/stats2-light-responsive.svg" width="21.75%" alt="Stats 2" hspace="4" />`, `</picture>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/contributions-dark-responsive.svg" />`, `  <img src="${base}/contributions-light-responsive.svg" width="50.5%" alt="Contributions" hspace="4" />`, `</picture>`, `<br/>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/languages-dark-responsive.svg" />`, `  <img src="${base}/languages-light-responsive.svg" width="96.5%" alt="Languages" />`, `</picture>`, `\`\`\``);
+          summaryLines.push(``, `### Markdown Usage (responsive)`, ``, `\`\`\`markdown`, `![Stats1](${base}/stats1-adaptive-responsive.svg)`, `![Stats2](${base}/stats2-adaptive-responsive.svg)`, `![Contributions](${base}/contributions-adaptive-responsive.svg)`, `![Languages](${base}/languages-adaptive-responsive.svg)`, `\`\`\``, ``, `### HTML Usage (responsive, with dark/light theme support)`, ``, `\`\`\`html`, `<div align="center" style="max-width:800px;margin:0 auto">`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats1-dark-responsive.svg" />`, `  <img src="${base}/stats1-light-responsive.svg" width="21.75%" alt="Stats 1" hspace="4" />`, `</picture>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/stats2-dark-responsive.svg" />`, `  <img src="${base}/stats2-light-responsive.svg" width="21.75%" alt="Stats 2" hspace="4" />`, `</picture>`, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/contributions-dark-responsive.svg" />`, `  <img src="${base}/contributions-light-responsive.svg" width="50.5%" alt="Contributions" hspace="4" />`, `</picture>`, ``, `<br/>`, ``, `<picture>`, `  <source media="(prefers-color-scheme: dark)" srcset="${base}/languages-dark-responsive.svg" />`, `  <img src="${base}/languages-light-responsive.svg" width="96.5%" alt="Languages" />`, `</picture>`, `</div>`, `\`\`\``);
         }
         appendSummary(summaryLines.join(`
 `));
