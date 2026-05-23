@@ -12,7 +12,7 @@ export function statsFromYaml(yaml: string): GitHubStats {
 }
 
 export function writeStatsYaml(filePath: string, stats: GitHubStats): void {
-  writeFileSync(filePath, statsToYaml(stats), "utf-8");
+  writeFileSync(filePath, statsToYaml({ ...stats, generatedAt: new Date().toISOString() }), "utf-8");
 }
 
 export function readStatsYaml(filePath: string): GitHubStats {
