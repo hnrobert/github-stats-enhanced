@@ -80,7 +80,7 @@ export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): s
     if (topRepos.length > 0) {
       const heading = total > 10 ? `Top 10 repos (of ${total})` : `Repos (${total})`;
       lines.push(``);
-      lines.push(`**${heading}**`);
+      lines.push(`#### ${heading}`);
       lines.push(``);
       lines.push(`| Repo | Bytes | % in repo | % of language |`);
       lines.push(`|---|---|---|---|`);
