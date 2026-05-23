@@ -73,7 +73,7 @@ export async function fetchGitHubStats(
   // Own repos fall back to cachedRepoMap; contributed repos fall back to repoTotalCommits.
   const totalCommitsMap   = new Map<string, number>();
   const userCommitsOwnMap = new Map<string, number>();
-  let fetchCount = 0, cacheCount = 0;
+  let commitApiCalls = 0, cacheCount = 0;
   const fetchedRepos: string[] = [];
   await Promise.all([
     ...Array.from(allRepoKeys).map(async (key) => {
@@ -83,7 +83,7 @@ export async function fetchGitHubStats(
       if (notUpdated && cached !== undefined) { totalCommitsMap.set(key, cached); cacheCount++; return; }
       const slash = key.indexOf("/");
       const count = await fetchCommitCount(token, key.slice(0, slash), key.slice(slash + 1));
-      totalCommitsMap.set(key, count); fetchCount++;
+      totalCommitsMap.set(key, count); commitApiCalls++;
       fetchedRepos.push(key);
     }),
     ...ownRepos.map(async (r) => {
@@ -93,11 +93,12 @@ export async function fetchGitHubStats(
       const cached     = cachedRepoMap.get(key)?.userCommits;
       if (notUpdated && cached !== undefined) { userCommitsOwnMap.set(key, cached); return; }
       const count = await fetchCommitCount(token, r.owner.login, r.name);
-      userCommitsOwnMap.set(key, count); fetchCount++;
+      userCommitsOwnMap.set(key, count); commitApiCalls++;
     }),
   ]);
-  console.log(`📦 Repo commit counts: ${fetchCount} fetched, ${cacheCount} from cache (${allRepoKeys.size} total)`);
-  if (fetchedRepos.length > 0) {
+  const reposFetched = fetchedRepos.length;
+  console.log(`📦 Repos: ${allRepoKeys.size} total — ${reposFetched} re-fetched, ${cacheCount} cached | fetchCommitCount calls: ${commitApiCalls}`);
+  if (reposFetched > 0) {
     for (const key of fetchedRepos.sort()) console.log(`   ↳ ${key}`);
   }
   console.log(`🌐 Total API requests this run: ${getRequestCount()}`);
