@@ -62,7 +62,9 @@ if (fromCache) {
     process.exit(1);
   }
   console.log(`Fetching stats for: ${username}`);
-  stats = await fetchGitHubStats(token, username);
+  const cachedStats = existsSync(dataFile) ? readStatsYaml(dataFile) : undefined;
+  if (cachedStats?.generatedAt) console.log(`Using cache from: ${cachedStats.generatedAt}`);
+  stats = await fetchGitHubStats(token, username, true, cachedStats);
   console.log(`Fetched — ${stats.stats.totalCommits} commits, ${stats.stats.totalStars} stars`);
   writeStatsYaml(dataFile, stats);
   console.log(`Wrote ${dataFile}`);
