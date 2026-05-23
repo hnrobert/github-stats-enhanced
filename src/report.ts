@@ -18,6 +18,24 @@ export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): s
     return "█".repeat(filled) + "░".repeat(width - filled);
   };
 
+  // Build a map: language → top repos sorted by bytes for that language
+  const langRepoMap = new Map<string, { entries: Array<{ repo: string; size: number; pct: number; repoPct: number }>; total: number }>();
+  for (const lang of st.languageStats) {
+    const entries: Array<{ repo: string; size: number; pct: number; repoPct: number }> = [];
+    for (const r of stats.repos) {
+      const match = r.languages.find((l) => l.name === lang.language);
+      if (!match) continue;
+      entries.push({
+        repo: `${r.owner}/${r.name}`,
+        size: match.size,
+        pct: lang.count > 0 ? Math.round((match.size / lang.count) * 10000) / 100 : 0,
+        repoPct: match.percentage,
+      });
+    }
+    entries.sort((a, b) => b.size - a.size);
+    langRepoMap.set(lang.language, { entries: entries.slice(0, 10), total: entries.length });
+  }
+
   const lines: string[] = [
     `# GitHub Stats Report — ${u.login}`,
     ``,
@@ -52,15 +70,29 @@ export function buildReport(stats: GitHubStats, baseUrl = ".", treeUrl = "."): s
     ``,
     `## Language Breakdown (weighted across all repos)`,
     ``,
-    `| Language | Bytes (weighted) | % | Distribution |`,
-    `|---|---|---|---|`,
-    ...st.languageStats.map((l) =>
-      `| ${l.language} | ${Math.round(l.count).toLocaleString()} | ${l.percentage.toFixed(2)}% | \`${bar(l.percentage)}\` |`
-    ),
-    ``,
-    `## Repositories (${stats.repos.length} scanned)`,
-    ``,
   ];
+
+  for (const l of st.languageStats) {
+    lines.push(`### ${l.language} — ${l.percentage.toFixed(2)}% \`${bar(l.percentage)}\``);
+    lines.push(``);
+    lines.push(`**${Math.round(l.count).toLocaleString()} bytes** (weighted)`);
+    const { entries: topRepos, total } = langRepoMap.get(l.language) ?? { entries: [], total: 0 };
+    if (topRepos.length > 0) {
+      const heading = total > 10 ? `Top 10 repos (of ${total})` : `Repos (${total})`;
+      lines.push(``);
+      lines.push(`**${heading}**`);
+      lines.push(``);
+      lines.push(`| Repo | Bytes | % in repo | % of language |`);
+      lines.push(`|---|---|---|---|`);
+      for (const r of topRepos) {
+        lines.push(`| [${r.repo}](https://github.com/${r.repo}) | ${r.size.toLocaleString()} | ${r.repoPct.toFixed(1)}% | ${r.pct.toFixed(1)}% |`);
+      }
+    }
+    lines.push(``);
+  }
+
+  lines.push(`## Repositories (${stats.repos.length} scanned)`);
+  lines.push(``);
 
   for (const r of stats.repos) {
     lines.push(`### [${r.owner}/${r.name}](https://github.com/${r.owner}/${r.name})`);
